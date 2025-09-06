@@ -16,6 +16,11 @@ namespace LineUp
             WinLen = winLen;
             Board = new int[Rows, Cols];
         }
+
+        public int[,] GetBoard()
+        {
+            return Board;
+        }
         
     }
 }

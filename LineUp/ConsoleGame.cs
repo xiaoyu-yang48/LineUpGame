@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 
 namespace LineUp
 {
@@ -8,63 +9,87 @@ namespace LineUp
         {
             Console.WriteLine("Welcome to Line Up!");
             // Game logic goes here
+
+            var (rows, cols, winLen) = SetBoardSize();
+            Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
+            var engine = new GameEngine(rows, cols, winLen);
+            PrintBoard(engine);
         }
 
-        public class GameBoard
+        private static (int rows, int cols, int winLen) SetBoardSize()
         {
-            public int Rows { get; }
-            public int Cols { get; }
+            const int minRows = 6;
+            const int minCols = 7;
+            int rows = 0;
+            int cols = 0;
 
-            public static (int rows, int cols) SetBoardSize()
+            while (true)
             {
-                const int minRows = 6;
-                const int minCols = 7;
-                int rows = 0;
-                int cols = 0;
-
-                while (true)
+                try
                 {
-                    try
-                    {
-                        Console.WriteLine($"Please enter your board rows: (>= {minRows})");
-                        rows = int.Parse(Console.ReadLine());
-                        Console.WriteLine($"Please enter your board columns: (>= {minCols}), and rows <= columns");
-                        cols = int.Parse(Console.ReadLine());
+                    Console.WriteLine($"Please enter your board rows: (>= {minRows})");
+                    rows = int.Parse(Console.ReadLine());
+                    Console.WriteLine($"Please enter your board columns: (>= {minCols}), and rows <= columns");
+                    cols = int.Parse(Console.ReadLine());
 
-                        if (rows < minRows)
-                            throw new ArgumentOutOfRangeException($"Rows must be >= {minRows}");
-                        if (cols < minCols)
-                            throw new ArgumentOutOfRangeException($"Columns must be >= {minCols}");
-                        if (rows > cols)
-                            throw new ArgumentOutOfRangeException("Rows cannot exceed columns.");
+                    if (rows < minRows)
+                        throw new ArgumentOutOfRangeException($"Rows must be >= {minRows}");
+                    if (cols < minCols)
+                        throw new ArgumentOutOfRangeException($"Columns must be >= {minCols}");
+                    if (rows > cols)
+                        throw new ArgumentOutOfRangeException("Rows cannot exceed columns.");
 
-                        break;
-                    }
-                    catch (ArgumentNullException)
-                    {
-                        Console.WriteLine("Your input was null.");
-                    }
-                    catch (FormatException)
-                    {
-                        Console.WriteLine("Your input was not a valid integer.");
-                    }
-                    catch (OverflowException)
-                    {
-                        Console.WriteLine("Your number is too big or small");
-                    }
-                    catch (ArgumentOutOfRangeException e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Invalid input");
-                    }
+                    break;
                 }
-
-                return (rows, cols);
+                catch (ArgumentNullException)
+                {
+                    Console.WriteLine("Your input was null.");
+                }
+                catch (FormatException)
+                {
+                    Console.WriteLine("Your input was not a valid integer.");
+                }
+                catch (OverflowException)
+                {
+                    Console.WriteLine("Your number is too big or small");
+                }
+                catch (ArgumentOutOfRangeException e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Invalid input");
+                }
             }
+
+            int winLen = (int)(rows * cols * 0.1);
+            return (rows, cols, winLen);
         }
-        
+
+        private static void PrintBoard(GameEngine engine)
+        { 
+            int[,] board = engine.GetBoard();
+            for (int i = engine.Rows -1; i>=0; i--)
+            {
+                for (int j = 0;  j < engine.Cols; j++)
+                {
+                    char discSymbol;
+
+                    if (board[i, j] == 1) discSymbol = '@';
+                    else if (board[i, j] == 2) discSymbol = '#';
+                    else discSymbol = ' ';
+
+                    Console.Write($"|{discSymbol}");
+                }
+                Console.WriteLine("|");
+            }
+            for (int j = 1; j <= engine.Cols; j++)
+            {
+                Console.Write($" {j}");
+            }
+            Console.WriteLine();
+        }
     }
+
 }
