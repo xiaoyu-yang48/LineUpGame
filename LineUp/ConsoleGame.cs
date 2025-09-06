@@ -13,8 +13,72 @@ namespace LineUp
             var (rows, cols, winLen) = SetBoardSize();
             Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
             var engine = new GameEngine(rows, cols, winLen);
-            PrintBoard(engine);
+
+            while (true)
+            {
+                PrintBoard(engine);
+                int colInput = 0;
+                while (true)
+                {
+                    Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc:");
+                    try
+                    {
+                        colInput = int.Parse(Console.ReadLine());
+                        if (colInput <= 0 || colInput > cols)
+                            throw new ArgumentOutOfRangeException($"Your chosen column must be within the range: 1 to {cols}");
+                        break;
+                    }
+                    catch (ArgumentNullException)
+                    {
+                        Console.WriteLine("Your input was null.");
+                    }
+                    catch (FormatException)
+                    {
+                        Console.WriteLine("Your input was not a valid integer.");
+                    }
+                    catch (OverflowException)
+                    {
+                        Console.WriteLine("Your number is too big or small");
+                    }
+                    catch (ArgumentOutOfRangeException e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("Invalid input");
+                    }
+                }
+                int col = colInput - 1;
+
+                //try to drop a disc
+                if (!engine.DropDisc(col, out int placedRow))
+                {
+                    Console.WriteLine("Column is full.");
+                    continue;
+                }
+
+                //check if win the game
+                if (engine.WinCheck(placedRow, col))
+                {
+                    PrintBoard(engine);
+                    Console.WriteLine($"Player {engine.CurrentPlayer} wins!");
+                    break;
+                }
+
+                //check if the board is all full
+                if (engine.IsBoardFull())
+                {
+                    PrintBoard(engine);
+                    Console.WriteLine("No place to drop more discs. Game Draw.");
+                    break;
+                }
+
+                //switch to the other player's turn
+                engine.SwitchPlayer();
+            }
         }
+            
 
         private static (int rows, int cols, int winLen) SetBoardSize()
         {
