@@ -5,6 +5,7 @@ namespace LineUp
     public class GameEngine
     {
         private int[,] Board;
+        private DiscType[,] BoardType;
         public int Rows { get; }
         public int Cols { get; }
         public int WinLen { get; }
@@ -16,6 +17,7 @@ namespace LineUp
             Cols = cols;
             WinLen = winLen;
             Board = new int[Rows, Cols];
+            BoardType = new DiscType[Rows, Cols];
         }
 
         public int[,] GetBoard()
@@ -23,7 +25,17 @@ namespace LineUp
             return Board;
         }
 
-        public bool DropDisc(int col, out int placedRow)
+        public DiscType[,] GetBoardType()
+        {
+            return BoardType;
+        }
+
+        public enum DiscType
+        {
+            Boring, Magnetic, Drill
+        }
+
+        public bool DropDisc(int col, DiscType type, out int placedRow)
         {
             placedRow = -1;
             if (col < 0 || col >= Cols) return false;
@@ -33,11 +45,55 @@ namespace LineUp
                 if (Board[i, col] == 0)
                 {
                     Board[i, col] = CurrentPlayer;
+                    BoardType[i, col] = type;
+                    if (type == DiscType.Drill)
+                    {
+
+                    }
                     placedRow = i;
                     return true;
                 }
             }
             return false;
+        }
+
+        public void ApplyDiscEffect(int row, int col, out int newRow)
+        {
+            newRow = row;
+            var type = BoardType[row, col];
+            int owner = Board[row, col];
+            if (owner != 0)
+            {
+                //apply drill disc effect
+                if (type == DiscType.Drill)
+                {
+                    for (int i = 0; i < Rows; i++)
+                    {
+                        Board[i, col] = 0;
+                    }
+
+                    Board[0, col] = owner;
+                    BoardType[0, col] = DiscType.Boring;
+                    newRow = 0;
+                    return;
+                }
+
+                //apply magnetic disc effect
+                if ((type == DiscType.Magnetic))
+                {
+                    int targetDisc = -1;
+                    for (int i = row - 1; i >= 0; i--)
+                    {
+                        if (Board[i, col] == owner)
+                        {
+                            targetDisc = i;
+                            (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
+                            (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
+                        }
+                    }
+                    BoardType[row, col] = DiscType.Boring;
+                }
+            }
         }
 
         public bool WinCheck (int row, int col)

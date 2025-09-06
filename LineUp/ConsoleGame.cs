@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 
 namespace LineUp
 {
@@ -17,7 +16,9 @@ namespace LineUp
             while (true)
             {
                 PrintBoard(engine);
+                var selectedType = ReadDiscType(engine);
                 int colInput = 0;
+
                 while (true)
                 {
                     Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc:");
@@ -52,14 +53,20 @@ namespace LineUp
                 int col = colInput - 1;
 
                 //try to drop a disc
-                if (!engine.DropDisc(col, out int placedRow))
+                if (!engine.DropDisc(col, selectedType, out int placedRow))
                 {
                     Console.WriteLine("Column is full.");
                     continue;
                 }
+                PrintBoard(engine);
+
+                //apply disc special effects
+
+                engine.ApplyDiscEffect(placedRow, col, out int newRow);
+                PrintBoard(engine);
 
                 //check if win the game
-                if (engine.WinCheck(placedRow, col))
+                if (engine.WinCheck(newRow, col))
                 {
                     PrintBoard(engine);
                     Console.WriteLine($"Player {engine.CurrentPlayer} wins!");
@@ -78,8 +85,29 @@ namespace LineUp
                 engine.SwitchPlayer();
             }
         }
-            
 
+        private static GameEngine.DiscType ReadDiscType(GameEngine engine)
+        {
+            while (true)
+            {
+                Console.WriteLine($"Player {engine.CurrentPlayer}, select your disc type: 1 = boring, 2 = magnetic, 3 = drill");
+
+                var typeInfo = Console.ReadLine();
+                if (typeInfo == "1")
+                {
+                    return GameEngine.DiscType.Boring;
+                }
+                if (typeInfo == "2")
+                {
+                    return GameEngine.DiscType.Magnetic;
+                }
+                if (typeInfo == "3")
+                {
+                    return GameEngine.DiscType.Drill;
+                }
+                Console.WriteLine("Invalid Type.");
+            }
+        }
         private static (int rows, int cols, int winLen) SetBoardSize()
         {
             const int minRows = 6;
@@ -134,15 +162,42 @@ namespace LineUp
         private static void PrintBoard(GameEngine engine)
         { 
             int[,] board = engine.GetBoard();
+            var types = engine.GetBoardType();
+
             for (int i = engine.Rows -1; i>=0; i--)
             {
-                for (int j = 0;  j < engine.Cols; j++)
+                for (int j = 0; j < engine.Cols; j++)
                 {
                     char discSymbol;
 
                     if (board[i, j] == 1) discSymbol = '@';
                     else if (board[i, j] == 2) discSymbol = '#';
                     else discSymbol = ' ';
+
+                    //check if it is special disc
+                    if (board[i, j] == 1)
+                    {
+                        if (types[i, j] == GameEngine.DiscType.Magnetic)
+                        {
+                            discSymbol = 'M';
+                        }
+                        if (types[i, j] == GameEngine.DiscType.Drill)
+                        {
+                            discSymbol = 'B';
+                        }
+                    }
+
+                    if (board[i, j] == 2)
+                    {
+                        if (types[i, j] == GameEngine.DiscType.Magnetic)
+                        {
+                            discSymbol = 'm';
+                        }
+                        if (types[i, j] == GameEngine.DiscType.Drill)
+                        {
+                            discSymbol = 'b';
+                        }
+                    }
 
                     Console.Write($"|{discSymbol}");
                 }
