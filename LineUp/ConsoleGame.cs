@@ -68,7 +68,6 @@ namespace LineUp
                 //check if win the game
                 if (engine.WinCheck(newRow, col))
                 {
-                    PrintBoard(engine);
                     Console.WriteLine($"Player {engine.CurrentPlayer} wins!");
                     break;
                 }

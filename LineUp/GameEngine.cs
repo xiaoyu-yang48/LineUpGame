@@ -9,6 +9,9 @@ namespace LineUp
         public int Rows { get; }
         public int Cols { get; }
         public int WinLen { get; }
+
+        public Player Player1 { get; }
+        public Player Player2 { get; }
         public int CurrentPlayer { get; private set; } = 1;
 
         public GameEngine(int rows, int cols, int winLen)
@@ -18,6 +21,8 @@ namespace LineUp
             WinLen = winLen;
             Board = new int[Rows, Cols];
             BoardType = new DiscType[Rows, Cols];
+            Player1 = new Player(1, rows * cols);
+            Player2 = new Player(2, rows * cols);
         }
 
         public int[,] GetBoard()
@@ -35,26 +40,36 @@ namespace LineUp
             Boring, Magnetic, Drill
         }
 
+        private Player GetCurrent()
+        {
+            return (CurrentPlayer == 1) ? Player1 : Player2;
+        }
+
         public bool DropDisc(int col, DiscType type, out int placedRow)
         {
             placedRow = -1;
             if (col < 0 || col >= Cols) return false;
 
+            int targetRow = -1;
             for (int i = 0; i < Rows; i++)
             {
                 if (Board[i, col] == 0)
                 {
-                    Board[i, col] = CurrentPlayer;
-                    BoardType[i, col] = type;
-                    if (type == DiscType.Drill)
-                    {
-
-                    }
-                    placedRow = i;
-                    return true;
+                    targetRow = i;
+                    break;
                 }
             }
-            return false;
+            if (targetRow == -1) return false;
+
+            //check disc stock
+            var p = GetCurrent();
+            if (!p.Has(type)) return false;
+            p.Consume(type);
+
+            Board[targetRow, col] = CurrentPlayer;
+            BoardType[targetRow, col] = type;
+            placedRow = targetRow;
+            return true;
         }
 
         public void ApplyDiscEffect(int row, int col, out int newRow)
@@ -67,10 +82,21 @@ namespace LineUp
                 //apply drill disc effect
                 if (type == DiscType.Drill)
                 {
+                    int countP1 =0, countP2 =0;
                     for (int i = 0; i < Rows; i++)
                     {
+                        if (i != row && Board[i,col] != 0)
+                        {
+                            if (Board[i, col] == 1) countP1++;
+                            if (Board[i, col] == 2) countP2++;
+                        }
+
                         Board[i, col] = 0;
+                        BoardType [i, col] = DiscType.Boring;
                     }
+
+                    Player1.ReturnDisc(countP1);
+                    Player2.ReturnDisc(countP2);
 
                     Board[0, col] = owner;
                     BoardType[0, col] = DiscType.Boring;
@@ -81,17 +107,18 @@ namespace LineUp
                 //apply magnetic disc effect
                 if ((type == DiscType.Magnetic))
                 {
-                    int targetDisc = -1;
-                    for (int i = row - 1; i >= 0; i--)
+                    for (int i = row - 2; i >= 0; i--)
                     {
-                        if (Board[i, col] == owner)
+                        if (Board[i, col] == owner && BoardType[i, col]==DiscType.Boring)
                         {
-                            targetDisc = i;
                             (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
                             (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
+                            break;
                         }
                     }
                     BoardType[row, col] = DiscType.Boring;
+                    newRow = row;
+                    return;
                 }
             }
         }
