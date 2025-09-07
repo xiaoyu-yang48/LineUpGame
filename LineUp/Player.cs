@@ -17,6 +17,13 @@ namespace LineUp
             BoringDiscs = totalDiscs / 2 - DrillDiscs - MagneticDiscs;
         }
 
+        public void SetStock(int boringNum,int magneticNum, int drillNum)
+        {
+            BoringDiscs = boringNum;
+            MagneticDiscs = magneticNum;
+            DrillDiscs = drillNum;
+        }
+
         public bool Has(GameEngine.DiscType type)
         {
             switch (type)

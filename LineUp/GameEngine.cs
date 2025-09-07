@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LineUp
 {
@@ -20,22 +21,6 @@ namespace LineUp
         //random - computer randoms drop discs
         private readonly Random rand = new Random();
 
-        //change and restore
-        private struct Change
-        {
-            public int R, C;
-            public int OldOwner;
-            public DiscType OldType;
-        }
-
-        private bool recording = false;
-        private Change[] changes;
-        private int changesCount;
-        private bool [,] touched;
-
-        private int bakCP;
-        private int p1B, p1M, p1D, p2B, p2M, p2D;
-
         public GameEngine(int rows, int cols, int winLen, bool isVsComputer = false)
         {
             Rows = rows;
@@ -48,26 +33,61 @@ namespace LineUp
             Player2 = new Player(2, rows * cols);
         }
 
-        public int[,] GetBoard()
-        {
-            return Board;
-        }
+        public int[,] GetBoard() => Board;
 
-        public DiscType[,] GetBoardType()
-        {
-            return BoardType;
-        }
+        public DiscType[,] GetBoardType() => BoardType;
+        
 
         public enum DiscType
         {
             Boring, Magnetic, Drill
         }
 
-        private Player GetCurrent()
+        private Player GetCurrent() => (CurrentPlayer == 1) ? Player1 : Player2;
+
+
+
+        //change and restore
+        private bool recording = false;
+        private int[,] backupBoard;
+        private DiscType[,] backupBoardType;
+        private int bakCP;
+        private int p1B, p1M, p1D, p2B, p2M, p2D;
+
+        public void BeginRecord()
         {
-            return (CurrentPlayer == 1) ? Player1 : Player2;
+            recording = true;
+
+            //clone current board
+            backupBoard = (int[,])Board.Clone();
+            backupBoardType = (DiscType[,])BoardType.Clone();
+
+            //backup disc stock and current player
+            bakCP = CurrentPlayer;
+            p1B = Player1.BoringDiscs; p1M = Player1.MagneticDiscs; p1D = Player1.DrillDiscs;
+            p2B = Player2.BoringDiscs; p2M = Player2.MagneticDiscs; p2D = Player2.DrillDiscs;
         }
 
+        public void RollBack()
+        {
+            if (!recording) return;
+
+            //restore board
+            Board = (int[,])backupBoard.Clone();
+            BoardType = (DiscType[,])backupBoardType.Clone();
+
+            //restore player and disc stock
+            CurrentPlayer = bakCP;
+            Player1.SetStock(p1B, p1M, p1D);
+            Player2.SetStock(p2B, p2M, p2D);
+
+            recording = false;
+            backupBoard = null;
+            backupBoardType = null;
+        }
+
+
+        //basic game funcs
         public bool DropDisc(int col, DiscType type, out int placedRow)
         {
             placedRow = -1;
@@ -100,7 +120,6 @@ namespace LineUp
             changedDisc = new List<(int r, int c)>();
             var type = BoardType[row, col];
             int owner = Board[row, col];
-            if (owner == 0) return;
 
             if (owner != 0)
             {
@@ -141,12 +160,7 @@ namespace LineUp
                     changedDisc.Add((row, col));
 
                     //row == 0, no place underneath
-                    if (row == 0)
-                    {
-                        BoardType[row, col] = DiscType.Boring;
-                        return;
-                    }
-                    if (row > 0 && Board[row-1, col] == owner)
+                    if (row == 0 || (row > 0 && Board[row - 1, col] == owner))
                     {
                         BoardType[row, col] = DiscType.Boring;
                         return;
@@ -280,7 +294,6 @@ namespace LineUp
                     if (curWin && oppWin) return;
                 }
             }
-            return;
         }
 
         public void SwitchPlayer()
@@ -297,5 +310,109 @@ namespace LineUp
             return true;
         }
 
+        private bool IsColumnPlayable (int col)
+        {
+            if (col < 0 || col >= Cols) return false;
+            return Board[Rows - 1, col]==0;
+        }
+
+        private bool IsDisctypePlayable (DiscType type)
+        {
+            return GetCurrent().Has(type);
+        }
+
+        public bool TryMoveWins(int col, DiscType type)
+        {
+            if (!IsColumnPlayable(col)) return false;
+            if (!GetCurrent().Has(type)) return false;
+
+            int targetRow = -1;
+            for (int i = 0; i < Rows; i++)
+            {
+                if (Board[i, col] == 0)
+                {
+                    targetRow = i;
+                    break;
+                }
+            }
+            if (targetRow == -1) return false; //otherwise valid move exists
+
+            BeginRecord();
+
+            try
+            {
+                if (!DropDisc(col, type, out int placedRow)) return false;
+
+                ApplyDiscEffect(placedRow, col, out List<(int r, int c)> changedDisc);
+                if (changedDisc == null) return false;
+                WinCheck(changedDisc, out bool curWin, out bool oppWin);
+                return curWin && !oppWin;
+            }
+
+            finally
+            {
+                RollBack();
+            }
+        }
+
+        public bool FindWinningMove(out int col, out DiscType type)
+        {
+            for (int j = 0; j < Cols; j++)
+            {
+                if (!IsColumnPlayable(j)) continue;
+
+                //collect playable disc types
+                List<DiscType> playableTypes = new List<DiscType>();
+                if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
+                if (IsDisctypePlayable(DiscType.Magnetic)) playableTypes.Add(DiscType.Magnetic);
+                if (IsDisctypePlayable(DiscType.Drill)) playableTypes.Add(DiscType.Drill);
+
+                foreach (DiscType t in playableTypes)
+                {
+                    if (TryMoveWins(j, t))
+                    {
+                        col = j;
+                        type = t;
+                        return true;
+                    }
+                }   
+            }
+
+            col = -1;
+            type = DiscType.Boring;
+            return false;
+        }
+
+        public bool RandomMove(out int col, out DiscType type)
+        {
+            var playableCol = new List<int>();
+            for (int j = 0; j < Cols; j++)
+            {
+                if (IsColumnPlayable(j)) playableCol.Add(j);
+            }
+            if (playableCol.Count == 0)
+            {
+                col = -1;
+                type = DiscType.Boring;
+                return false;
+            }
+
+            //collect playable disc types
+            List<DiscType> playableTypes = new List<DiscType>();
+            if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
+            if (IsDisctypePlayable(DiscType.Magnetic)) playableTypes.Add(DiscType.Magnetic);
+            if (IsDisctypePlayable(DiscType.Drill)) playableTypes.Add(DiscType.Drill);
+            if (playableTypes.Count == 0)
+            {
+                col = -1;
+                type = DiscType.Boring;
+                return false;
+            }
+
+            //generate random move
+            col = playableCol[rand.Next(playableCol.Count)];
+            type = playableTypes[rand.Next(playableTypes.Count)];
+            return true;
+        }
     }
 }

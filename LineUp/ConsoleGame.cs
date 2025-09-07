@@ -120,6 +120,25 @@ namespace LineUp
 
                 //switch to the other player's turn
                 engine.SwitchPlayer();
+
+                if (engine.IsVsComputer && engine.CurrentPlayer == 2)
+                {
+                    int attemptCol;
+                    GameEngine.DiscType attemptType;
+
+                    if (!engine.FindWinningMove(out attemptCol, out attemptType))
+                    {
+                        if (!engine.RandomMove(out attemptCol, out attemptType))
+                        {
+                            Console.WriteLine("Computer: No valid move. Game draw.");
+                            break;
+                        }
+                    }
+
+                    if (!engine.DropDisc(attemptCol, attemptType, out int attemptplacedRow))
+                    { 
+                    }
+                }
             }
         }
 
