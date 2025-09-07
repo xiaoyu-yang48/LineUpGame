@@ -12,10 +12,10 @@ namespace LineUp
             var (rows, cols, winLen) = SetBoardSize();
             Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
             var engine = new GameEngine(rows, cols, winLen);
+            PrintBoard(engine);
 
             while (true)
             {
-                PrintBoard(engine);
                 var selectedType = ReadDiscType(engine);
                 int colInput = 0;
 
@@ -58,12 +58,20 @@ namespace LineUp
                     Console.WriteLine("Column is full.");
                     continue;
                 }
-                PrintBoard(engine);
 
                 //apply disc special effects
-
-                engine.ApplyDiscEffect(placedRow, col, out int newRow);
-                PrintBoard(engine);
+                int newRow;
+                if (selectedType == GameEngine.DiscType.Boring)
+                {
+                    newRow = placedRow;
+                    PrintBoard(engine);
+                }
+                else
+                {
+                    PrintBoard(engine);
+                    engine.ApplyDiscEffect(placedRow, col, out newRow);
+                    PrintBoard(engine);
+                }
 
                 //check if win the game
                 if (engine.WinCheck(newRow, col))
@@ -89,7 +97,9 @@ namespace LineUp
         {
             while (true)
             {
-                Console.WriteLine($"Player {engine.CurrentPlayer}, select your disc type: 1 = boring, 2 = magnetic, 3 = drill");
+                var p = (engine.CurrentPlayer == 1) ? engine.Player1 : engine.Player2;
+                Console.WriteLine($"Player {engine.CurrentPlayer}, your discs: boring = {p.BoringDiscs}, drill = {p.DrillDiscs}, magnetic = {p.MagneticDiscs}.");
+                Console.WriteLine($"Select your disc type: (1 = boring, 2 = magnetic, 3 = drill). ");
 
                 var typeInfo = Console.ReadLine();
                 if (typeInfo == "1")
