@@ -123,21 +123,59 @@ namespace LineUp
 
                 if (engine.IsVsComputer && engine.CurrentPlayer == 2)
                 {
-                    int attemptCol;
-                    GameEngine.DiscType attemptType;
+                    int botCol;
+                    GameEngine.DiscType botType;
 
-                    if (!engine.FindWinningMove(out attemptCol, out attemptType))
+                    if (!engine.FindWinningMove(out botCol, out botType))
                     {
-                        if (!engine.RandomMove(out attemptCol, out attemptType))
+                        if (!engine.RandomMove(out botCol, out botType))
                         {
                             Console.WriteLine("Computer: No valid move. Game draw.");
                             break;
                         }
                     }
 
-                    if (!engine.DropDisc(attemptCol, attemptType, out int attemptplacedRow))
-                    { 
+                    if (!engine.DropDisc(botCol, botType, out int botPlacedRow))
+                    {
+                        Console.WriteLine("Computer: Unexpected no valid move");
+                        break;
                     }
+
+                    if (botType != GameEngine.DiscType.Boring) PrintBoard(engine);
+                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<(int r, int c)> botChanged);
+                    PrintBoard(engine);
+
+                    engine.WinCheck(botChanged, out bool curWin2, out bool oppWin2);
+                    int cur2 = engine.CurrentPlayer;
+                    int opp2 = (engine.CurrentPlayer == 1) ? 2 : 1;
+                    if (curWin2 && !oppWin2)
+                    {
+                        Console.WriteLine($"Player {cur2} wins!");
+                        break;
+                    }
+                    //check if current player's move leads to opponent winning
+                    else if (oppWin2 && !curWin2)
+                    {
+                        Console.WriteLine($"Player {opp2} wins!");
+                        break;
+                    }
+                    else if (curWin2 && oppWin2)
+                    {
+                        Console.WriteLine($"Players {cur2} and {opp2} both aligned this turn. It's a draw!");
+                        break;
+                    }
+
+                    //check if the board is all full
+                    if (engine.IsBoardFull())
+                    {
+                        PrintBoard(engine);
+                        Console.WriteLine("No place to drop more discs. Game Draw.");
+                        break;
+                    }
+
+                    //switch to the other player's turn
+                    engine.SwitchPlayer();
+                    continue;
                 }
             }
         }
