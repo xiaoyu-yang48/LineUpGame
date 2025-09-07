@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace LineUp
 {
@@ -94,15 +95,21 @@ namespace LineUp
             return true;
         }
 
-        public void ApplyDiscEffect(int row, int col, out int newRow, out int specialRow, out int opponentRow)
+        public void ApplyDiscEffect(int row, int col, out List <(int r, int c)> changedDisc)
         {
-            newRow = row;
-            specialRow = -1;
-            opponentRow = -1;
+            changedDisc = new List<(int r, int c)>();
             var type = BoardType[row, col];
             int owner = Board[row, col];
+            if (owner == 0) return;
+
             if (owner != 0)
             {
+                //boring disc
+                if (type == DiscType.Boring)
+                {
+                    changedDisc.Add((row, col));
+                    return;
+                }
                 //apply drill disc effect
                 if (type == DiscType.Drill)
                 {
@@ -124,27 +131,24 @@ namespace LineUp
 
                     Board[0, col] = owner;
                     BoardType[0, col] = DiscType.Boring;
-                    newRow = 0;
+                    changedDisc.Add((0, col));
                     return;
                 }
 
                 //apply magnetic disc effect
                 if ((type == DiscType.Magnetic))
                 {
-                    specialRow = -1;
-                    opponentRow = -1;
+                    changedDisc.Add((row, col));
 
                     //row == 0, no place underneath
                     if (row == 0)
                     {
                         BoardType[row, col] = DiscType.Boring;
-                        newRow = row;
                         return;
                     }
-                    if (Board[row-1, col] == owner)
+                    if (row > 0 && Board[row-1, col] == owner)
                     {
                         BoardType[row, col] = DiscType.Boring;
-                        newRow = row;
                         return;
                     }
                     for (int i = row - 2; i >= 0; i--)
@@ -153,19 +157,19 @@ namespace LineUp
                         {
                             (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
                             (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
-                            specialRow = i + 1;
-                            opponentRow = i;
+                          
+                            changedDisc.Add((i+1, col));
+                            changedDisc.Add((i, col));
                             break;
                         }
                     }
                     BoardType[row, col] = DiscType.Boring;
-                    newRow = row;
                     return;
                 }
             }
         }
 
-        public bool WinCheck (int row, int col)
+        public bool CheckCellWin (int row, int col)
         {
             int player = Board[row, col];
             if (player == 0) return false;
@@ -251,6 +255,32 @@ namespace LineUp
             if (count >= WinLen) return true;
 
             return false;
+        }
+
+        public void WinCheck (List<(int r, int c)> changedDisc, out bool curWin, out bool oppWin)
+        {
+            curWin = false;
+            oppWin = false;
+
+            if (changedDisc == null || changedDisc.Count == 0) return;
+
+            int cur = CurrentPlayer;
+            int opp = (CurrentPlayer == 1) ? 2 : 1;
+
+            foreach (var (r, c) in changedDisc)
+            {
+                if (r < 0 || r >= Rows || c < 0 || c >= Cols) continue;
+                int owner = Board[r, c];
+                if (owner == 0) continue;
+                if (CheckCellWin(r, c))
+                {
+                    if (owner == cur) curWin = true;
+                    else if (owner == opp) oppWin = true;
+
+                    if (curWin && oppWin) return;
+                }
+            }
+            return;
         }
 
         public void SwitchPlayer()

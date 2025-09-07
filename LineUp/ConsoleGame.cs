@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace LineUp
 {
@@ -80,29 +81,18 @@ namespace LineUp
                 }
 
                 //apply disc special effects
-                int newRow = -1;
-                int specialRow = -1;
-                int opponentRow = -1;
-                if (selectedType == GameEngine.DiscType.Boring)
-                {
-                    newRow = placedRow;
-                    PrintBoard(engine);
-                }
-                else
-                {
-                    PrintBoard(engine);
-                    engine.ApplyDiscEffect(placedRow, col, out newRow, out specialRow, out opponentRow);
-                    PrintBoard(engine);
-                }
+                var changed = new List<(int r, int c)>();
+                if (selectedType != GameEngine.DiscType.Boring) PrintBoard(engine);
+                
 
-                //check if current player win the game
+                engine.ApplyDiscEffect(placedRow, col, out changed);
+                PrintBoard(engine);
+               
+
+                //wincheck
+                engine.WinCheck(changed, out bool curWin, out bool oppWin);
                 int cur = engine.CurrentPlayer;
-                int opp = (cur == 1) ? 2 : 1;
-                var board = engine.GetBoard();
-
-                bool curWin = engine.WinCheck(newRow, col) || (specialRow >= 0 && board [specialRow,col] == cur && engine.WinCheck(specialRow, col));
-                bool oppWin = opponentRow >= 0 && board[opponentRow, col] == opp && engine.WinCheck(opponentRow, col);
-
+                int opp = (engine.CurrentPlayer == 1) ? 2 : 1;
                 if (curWin && !oppWin)
                 {
                     Console.WriteLine($"Player {cur} wins!");
