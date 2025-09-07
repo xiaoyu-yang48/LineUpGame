@@ -72,9 +72,10 @@ namespace LineUp
             return true;
         }
 
-        public void ApplyDiscEffect(int row, int col, out int newRow)
+        public void ApplyDiscEffect(int row, int col, out int newRow, out int magneticRow)
         {
             newRow = row;
+            magneticRow = -1;
             var type = BoardType[row, col];
             int owner = Board[row, col];
             if (owner != 0)
@@ -113,6 +114,7 @@ namespace LineUp
                         {
                             (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
                             (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
+                            magneticRow = i + 1;
                             break;
                         }
                     }
