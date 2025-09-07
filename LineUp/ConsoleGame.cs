@@ -6,12 +6,32 @@ namespace LineUp
     {
         public static void Start()
         {
-            Console.WriteLine("Welcome to Line Up!");
+            bool isVsComputer = false;
+            while (true)
+            {
+                Console.WriteLine("Welcome to Line Up! Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
+                var gameMode = Console.ReadLine()?.Trim();
+                if (gameMode == "1")
+                {
+                    isVsComputer = false;
+                    break;
+                }
+                else if (gameMode == "2")
+                {
+                    isVsComputer = true;
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input, please enter 1 or 2.");
+                }
+            }
+
             // Game logic goes here
 
             var (rows, cols, winLen) = SetBoardSize();
             Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
-            var engine = new GameEngine(rows, cols, winLen);
+            var engine = new GameEngine(rows, cols, winLen, isVsComputer);
             PrintBoard(engine);
 
             while (true)
@@ -55,30 +75,48 @@ namespace LineUp
                 //try to drop a disc
                 if (!engine.DropDisc(col, selectedType, out int placedRow))
                 {
-                    Console.WriteLine("Column is full.");
+                    Console.WriteLine("Invalid move.");
                     continue;
                 }
 
                 //apply disc special effects
-                int newRow;
-                int magneticRow;
+                int newRow = -1;
+                int specialRow = -1;
+                int opponentRow = -1;
                 if (selectedType == GameEngine.DiscType.Boring)
                 {
                     newRow = placedRow;
-                    magneticRow = -1;
                     PrintBoard(engine);
                 }
                 else
                 {
                     PrintBoard(engine);
-                    engine.ApplyDiscEffect(placedRow, col, out newRow, out magneticRow);
+                    engine.ApplyDiscEffect(placedRow, col, out newRow, out specialRow, out opponentRow);
                     PrintBoard(engine);
                 }
 
-                //check if win the game
-                if (engine.WinCheck(newRow, col)||(magneticRow >=0 && engine.WinCheck(magneticRow, col)))
+                //check if current player win the game
+                int cur = engine.CurrentPlayer;
+                int opp = (cur == 1) ? 2 : 1;
+                var board = engine.GetBoard();
+
+                bool curWin = engine.WinCheck(newRow, col) || (specialRow >= 0 && board [specialRow,col] == cur && engine.WinCheck(specialRow, col));
+                bool oppWin = opponentRow >= 0 && board[opponentRow, col] == opp && engine.WinCheck(opponentRow, col);
+
+                if (curWin && !oppWin)
                 {
-                    Console.WriteLine($"Player {engine.CurrentPlayer} wins!");
+                    Console.WriteLine($"Player {cur} wins!");
+                    break;
+                }
+                //check if current player's move leads to opponent winning
+                else if (oppWin && !curWin) 
+                {
+                    Console.WriteLine($"Player {opp} wins!");
+                    break;
+                }
+                else if (curWin && oppWin)
+                {
+                    Console.WriteLine($"Players {cur} and {opp} both aligned this turn. It's a draw!");
                     break;
                 }
 
@@ -131,9 +169,9 @@ namespace LineUp
                 try
                 {
                     Console.WriteLine($"Please enter your board rows: (>= {minRows})");
-                    rows = int.Parse(Console.ReadLine());
+                    rows = int.Parse(Console.ReadLine()?.Trim());
                     Console.WriteLine($"Please enter your board columns: (>= {minCols}), and rows <= columns");
-                    cols = int.Parse(Console.ReadLine());
+                    cols = int.Parse(Console.ReadLine()?.Trim());
 
                     if (rows < minRows)
                         throw new ArgumentOutOfRangeException($"Rows must be >= {minRows}");

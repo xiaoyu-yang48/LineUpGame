@@ -14,11 +14,33 @@ namespace LineUp
         public Player Player2 { get; }
         public int CurrentPlayer { get; private set; } = 1;
 
-        public GameEngine(int rows, int cols, int winLen)
+        //computer mode
+        public bool IsVsComputer { get; }
+        //random - computer randoms drop discs
+        private readonly Random rand = new Random();
+
+        //change and restore
+        private struct Change
+        {
+            public int R, C;
+            public int OldOwner;
+            public DiscType OldType;
+        }
+
+        private bool recording = false;
+        private Change[] changes;
+        private int changesCount;
+        private bool [,] touched;
+
+        private int bakCP;
+        private int p1B, p1M, p1D, p2B, p2M, p2D;
+
+        public GameEngine(int rows, int cols, int winLen, bool isVsComputer = false)
         {
             Rows = rows;
             Cols = cols;
             WinLen = winLen;
+            IsVsComputer = isVsComputer;
             Board = new int[Rows, Cols];
             BoardType = new DiscType[Rows, Cols];
             Player1 = new Player(1, rows * cols);
@@ -72,10 +94,11 @@ namespace LineUp
             return true;
         }
 
-        public void ApplyDiscEffect(int row, int col, out int newRow, out int magneticRow)
+        public void ApplyDiscEffect(int row, int col, out int newRow, out int specialRow, out int opponentRow)
         {
             newRow = row;
-            magneticRow = -1;
+            specialRow = -1;
+            opponentRow = -1;
             var type = BoardType[row, col];
             int owner = Board[row, col];
             if (owner != 0)
@@ -89,7 +112,7 @@ namespace LineUp
                         if (i != row && Board[i,col] != 0)
                         {
                             if (Board[i, col] == 1) countP1++;
-                            if (Board[i, col] == 2) countP2++;
+                            else if (Board[i, col] == 2) countP2++;
                         }
 
                         Board[i, col] = 0;
@@ -108,13 +131,30 @@ namespace LineUp
                 //apply magnetic disc effect
                 if ((type == DiscType.Magnetic))
                 {
+                    specialRow = -1;
+                    opponentRow = -1;
+
+                    //row == 0, no place underneath
+                    if (row == 0)
+                    {
+                        BoardType[row, col] = DiscType.Boring;
+                        newRow = row;
+                        return;
+                    }
+                    if (Board[row-1, col] == owner)
+                    {
+                        BoardType[row, col] = DiscType.Boring;
+                        newRow = row;
+                        return;
+                    }
                     for (int i = row - 2; i >= 0; i--)
                     {
                         if (Board[i, col] == owner && BoardType[i, col]==DiscType.Boring)
                         {
                             (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
                             (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
-                            magneticRow = i + 1;
+                            specialRow = i + 1;
+                            opponentRow = i;
                             break;
                         }
                     }
