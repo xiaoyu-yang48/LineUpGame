@@ -40,7 +40,7 @@ namespace LineUp
 
         public enum DiscType
         {
-            Boring, Magnetic, Drill
+            Ordinary, Magnetic, Boring
         }
 
         private Player GetCurrent() => (CurrentPlayer == 1) ? Player1 : Player2;
@@ -64,8 +64,8 @@ namespace LineUp
 
             //backup disc stock and current player
             bakCP = CurrentPlayer;
-            p1B = Player1.BoringDiscs; p1M = Player1.MagneticDiscs; p1D = Player1.DrillDiscs;
-            p2B = Player2.BoringDiscs; p2M = Player2.MagneticDiscs; p2D = Player2.DrillDiscs;
+            p1B = Player1.OrdinaryDiscs; p1M = Player1.MagneticDiscs; p1D = Player1.BoringDiscs;
+            p2B = Player2.OrdinaryDiscs; p2M = Player2.MagneticDiscs; p2D = Player2.BoringDiscs;
         }
 
         public void RollBack()
@@ -123,14 +123,14 @@ namespace LineUp
 
             if (owner != 0)
             {
-                //boring disc
-                if (type == DiscType.Boring)
+                //ordinary disc
+                if (type == DiscType.Ordinary)
                 {
                     changedDisc.Add((row, col));
                     return;
                 }
-                //apply drill disc effect
-                if (type == DiscType.Drill)
+                //apply boring disc effect
+                if (type == DiscType.Boring)
                 {
                     int countP1 =0, countP2 =0;
                     for (int i = 0; i < Rows; i++)
@@ -142,14 +142,14 @@ namespace LineUp
                         }
 
                         Board[i, col] = 0;
-                        BoardType [i, col] = DiscType.Boring;
+                        BoardType [i, col] = DiscType.Ordinary;
                     }
 
                     Player1.ReturnDisc(countP1);
                     Player2.ReturnDisc(countP2);
 
                     Board[0, col] = owner;
-                    BoardType[0, col] = DiscType.Boring;
+                    BoardType[0, col] = DiscType.Ordinary;
                     changedDisc.Add((0, col));
                     return;
                 }
@@ -162,12 +162,12 @@ namespace LineUp
                     //row == 0, no place underneath
                     if (row == 0 || (row > 0 && Board[row - 1, col] == owner))
                     {
-                        BoardType[row, col] = DiscType.Boring;
+                        BoardType[row, col] = DiscType.Ordinary;
                         return;
                     }
                     for (int i = row - 2; i >= 0; i--)
                     {
-                        if (Board[i, col] == owner && BoardType[i, col]==DiscType.Boring)
+                        if (Board[i, col] == owner && BoardType[i, col]==DiscType.Ordinary)
                         {
                             (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
                             (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
@@ -177,7 +177,7 @@ namespace LineUp
                             break;
                         }
                     }
-                    BoardType[row, col] = DiscType.Boring;
+                    BoardType[row, col] = DiscType.Ordinary;
                     return;
                 }
             }
@@ -363,9 +363,9 @@ namespace LineUp
 
                 //collect playable disc types
                 List<DiscType> playableTypes = new List<DiscType>();
-                if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
+                if (IsDisctypePlayable(DiscType.Ordinary)) playableTypes.Add(DiscType.Ordinary);
                 if (IsDisctypePlayable(DiscType.Magnetic)) playableTypes.Add(DiscType.Magnetic);
-                if (IsDisctypePlayable(DiscType.Drill)) playableTypes.Add(DiscType.Drill);
+                if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
 
                 foreach (DiscType t in playableTypes)
                 {
@@ -379,7 +379,7 @@ namespace LineUp
             }
 
             col = -1;
-            type = DiscType.Boring;
+            type = DiscType.Ordinary;
             return false;
         }
 
@@ -393,19 +393,19 @@ namespace LineUp
             if (playableCol.Count == 0)
             {
                 col = -1;
-                type = DiscType.Boring;
+                type = DiscType.Ordinary;
                 return false;
             }
 
             //collect playable disc types
             List<DiscType> playableTypes = new List<DiscType>();
-            if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
+            if (IsDisctypePlayable(DiscType.Ordinary)) playableTypes.Add(DiscType.Ordinary);
             if (IsDisctypePlayable(DiscType.Magnetic)) playableTypes.Add(DiscType.Magnetic);
-            if (IsDisctypePlayable(DiscType.Drill)) playableTypes.Add(DiscType.Drill);
+            if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
             if (playableTypes.Count == 0)
             {
                 col = -1;
-                type = DiscType.Boring;
+                type = DiscType.Ordinary;
                 return false;
             }
 

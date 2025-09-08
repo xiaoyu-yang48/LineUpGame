@@ -5,33 +5,33 @@ namespace LineUp
     public class Player
     {
         public int Id { get; }
+        public int OrdinaryDiscs { get; set; }
         public int BoringDiscs { get; set; }
-        public int DrillDiscs { get; set; }
         public int MagneticDiscs { get; set; }
 
         public Player(int id, int totalDiscs) 
         { 
             Id = id;
-            DrillDiscs = 2;
+            BoringDiscs = 2;
             MagneticDiscs = 2;
-            BoringDiscs = totalDiscs / 2 - DrillDiscs - MagneticDiscs;
+            OrdinaryDiscs = totalDiscs / 2 - BoringDiscs - MagneticDiscs;
         }
 
-        public void SetStock(int boringNum,int magneticNum, int drillNum)
+        public void SetStock(int ordinaryNum,int magneticNum, int boringNum)
         {
-            BoringDiscs = boringNum;
+            OrdinaryDiscs = ordinaryNum;
             MagneticDiscs = magneticNum;
-            DrillDiscs = drillNum;
+            BoringDiscs = boringNum;
         }
 
         public bool Has(GameEngine.DiscType type)
         {
             switch (type)
             {
+                case GameEngine.DiscType.Ordinary:
+                    return OrdinaryDiscs > 0;
                 case GameEngine.DiscType.Boring:
                     return BoringDiscs > 0;
-                case GameEngine.DiscType.Drill:
-                    return DrillDiscs > 0;
                 case GameEngine.DiscType.Magnetic:
                     return MagneticDiscs > 0;
                 default:
@@ -42,11 +42,11 @@ namespace LineUp
         {
             switch (type)
             {
+                case GameEngine.DiscType.Ordinary:
+                    OrdinaryDiscs--;
+                    break;
                 case GameEngine.DiscType.Boring:
                     BoringDiscs--;
-                    break;
-                case GameEngine.DiscType.Drill:
-                    DrillDiscs--;
                     break;
                 case GameEngine.DiscType.Magnetic:
                     MagneticDiscs--;
@@ -56,7 +56,7 @@ namespace LineUp
 
         public void ReturnDisc (int count = 1)
         {
-            BoringDiscs += count;
+            OrdinaryDiscs += count;
         }
     }
 }

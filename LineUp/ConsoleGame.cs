@@ -82,7 +82,7 @@ namespace LineUp
 
                 //apply disc special effects
                 var changed = new List<(int r, int c)>();
-                if (selectedType != GameEngine.DiscType.Boring) PrintBoard(engine);
+                if (selectedType != GameEngine.DiscType.Ordinary) PrintBoard(engine);
                 
 
                 engine.ApplyDiscEffect(placedRow, col, out changed);
@@ -141,7 +141,7 @@ namespace LineUp
                         break;
                     }
 
-                    if (botType != GameEngine.DiscType.Boring) PrintBoard(engine);
+                    if (botType != GameEngine.DiscType.Ordinary) PrintBoard(engine);
                     engine.ApplyDiscEffect(botPlacedRow, botCol, out List<(int r, int c)> botChanged);
                     PrintBoard(engine);
 
@@ -185,23 +185,38 @@ namespace LineUp
             while (true)
             {
                 var p = (engine.CurrentPlayer == 1) ? engine.Player1 : engine.Player2;
-                Console.WriteLine($"Player {engine.CurrentPlayer}, your discs: boring = {p.BoringDiscs}, magnetic = {p.MagneticDiscs}, drill = {p.DrillDiscs}.");
-                Console.WriteLine($"Select your disc type: (1 = boring, 2 = magnetic, 3 = drill). ");
+                Console.WriteLine($"Player {engine.CurrentPlayer}, your discs: ordinary = {p.OrdinaryDiscs}, magnetic = {p.MagneticDiscs}, boring = {p.BoringDiscs}.");
+                Console.WriteLine($"Select your disc type: (O = ordinary, M = magnetic, B = boring). ");
 
-                var typeInfo = Console.ReadLine();
-                if (typeInfo == "1")
+                try
                 {
-                    return GameEngine.DiscType.Boring;
+                    var typeInfo = Console.ReadLine().ToUpper();
+                    if (typeInfo == "O")
+                    {
+                        return GameEngine.DiscType.Ordinary;
+                    }
+                    if (typeInfo == "M")
+                    {
+                        return GameEngine.DiscType.Magnetic;
+                    }
+                    if (typeInfo == "B")
+                    {
+                        return GameEngine.DiscType.Boring;
+                    }
+                    Console.WriteLine("Invalid Type.");
                 }
-                if (typeInfo == "2")
+                catch (ArgumentNullException)
                 {
-                    return GameEngine.DiscType.Magnetic;
+                    Console.WriteLine("Your input was null.");
                 }
-                if (typeInfo == "3")
+                catch (FormatException)
                 {
-                    return GameEngine.DiscType.Drill;
+                    Console.WriteLine("Your input format was not valid.");
                 }
-                Console.WriteLine("Invalid Type.");
+                catch (Exception)
+                {
+                    Console.WriteLine("Invalid input");
+                }
             }
         }
         private static (int rows, int cols, int winLen) SetBoardSize()
@@ -277,7 +292,7 @@ namespace LineUp
                         {
                             discSymbol = 'M';
                         }
-                        if (types[i, j] == GameEngine.DiscType.Drill)
+                        if (types[i, j] == GameEngine.DiscType.Boring)
                         {
                             discSymbol = 'B';
                         }
@@ -289,7 +304,7 @@ namespace LineUp
                         {
                             discSymbol = 'm';
                         }
-                        if (types[i, j] == GameEngine.DiscType.Drill)
+                        if (types[i, j] == GameEngine.DiscType.Boring)
                         {
                             discSymbol = 'b';
                         }
