@@ -224,7 +224,7 @@ namespace LineUp
 
             if (count >= WinLen) return true;
 
-            //Slash ¨L ¨J
+            //Slash diagonal: top-left to bottom-right
             count = 1;
             r = row - 1;
             c = col - 1;
@@ -246,7 +246,7 @@ namespace LineUp
 
             if (count >= WinLen) return true;
 
-            //Slash ¨K ¨I
+            //Slash diagonal: bottom-left to top-right
             count = 1;
             r = row - 1;
             c = col + 1;
