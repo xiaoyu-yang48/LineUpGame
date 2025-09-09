@@ -1,60 +1,110 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace LineUp
 {
     public static class ConsoleGame
     {
+        private const string SaveDirectory = "SavedGames";
+        private const string DefaultSaveFile = "SavedGame.json";
         public static void Start()
         {
-            Console.WriteLine("Welcome to Line Up!");
-            while (true)
-            {
-                Console.WriteLine("Enter 1 = load saved game, enter 2 = start a new game");
-
-
+            //ensure save directory exists
+            if (!Directory.Exists(SaveDirectory))
+            { 
+                Directory.CreateDirectory(SaveDirectory);
             }
-            bool isVsComputer = false;
+
+            Console.WriteLine("Welcome to Line Up!");
+            GameEngine engine = null;
+            
+            //main menu
             while (true)
             {
-                Console.WriteLine("Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
-                var gameMode = Console.ReadLine()?.Trim();
-                if (gameMode == "1")
+                Console.WriteLine("Enter 1 = start a new game; 2 = load saved game; 3 = exit");
+                var choice = Console.ReadLine()?.Trim();
+
+                if (choice == "1")
                 {
-                    isVsComputer = false;
+                    //start new game, set up board size
+                    var (rows, cols, winLen) = SetBoardSize();
+                    Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
+
+                    //select game mode
+                    bool vsComputer = ReadGameMode();
+
+                    //create game engine
+                    engine = new GameEngine(rows, cols, winLen, vsComputer);
                     break;
                 }
-                else if (gameMode == "2")
+                else if (choice == "2")
                 {
-                    isVsComputer = true;
-                    break;
+                    //load saved game
+                    engine = LoadGame();
+                    if (engine != null)
+                    {
+                        Console.WriteLine("Game loaded successfully!");
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to load game.");
+                    }
+                }
+                else if (choice == "3")
+                {
+                    Console.WriteLine("Thanks for playing! See you next time");
+                    return;
                 }
                 else
                 {
-                    Console.WriteLine("Invalid input, please enter 1 or 2.");
+                    Console.WriteLine("Invalid input. Please enter 1, 2, or 3.");
                 }
             }
+            
 
-            // Game logic goes here
-
-            var (rows, cols, winLen) = SetBoardSize();
-            Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
-            var engine = new GameEngine(rows, cols, winLen, isVsComputer);
-            PrintBoard(engine);
+            // Main game loop
+            PrintBoard (engine);
 
             while (true)
             {
+                Console.WriteLine("Type 'SAVE' to save game, 'LOAD' to load game, otherwise continue playing.");
                 var selectedType = ReadDiscType(engine);
                 int colInput = 0;
+                bool restartTurn = false;
 
                 while (true)
                 {
-                    Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc:");
+                    Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc (or 'SAVE'/'LOAD'):");
                     try
                     {
-                        colInput = int.Parse(Console.ReadLine());
-                        if (colInput <= 0 || colInput > cols)
-                            throw new ArgumentOutOfRangeException($"Your chosen column must be within the range: 1 to {cols}");
+                        var input = Console.ReadLine()?.Trim();
+
+                        //check if save or load
+                        if (input?.ToUpper() == "SAVE")
+                        {
+                            SaveGame(engine);
+                            continue;
+                        }
+                        else if (input?.ToUpper() == "LOAD")
+                        {
+                            var loadedEngine = LoadGame();
+                            if (loadedEngine != null)
+                            {
+                                engine = loadedEngine;
+                                Console.WriteLine("Game loaded successfully!");
+                                PrintBoard(engine);
+                            }
+                            restartTurn = true;
+                            break;
+                        }
+
+                        colInput = int.Parse(input ?? "0");
+                        if (colInput <= 0 || colInput > engine.Cols)
+                        {
+                            throw new ArgumentOutOfRangeException($"Your chosen column must be within the range: 1 to {engine.Cols}");
+                        }
                         break;
                     }
                     catch (ArgumentNullException)
@@ -78,6 +128,7 @@ namespace LineUp
                         Console.WriteLine("Invalid input");
                     }
                 }
+                if (restartTurn) continue;
                 int col = colInput - 1;
 
                 //try to drop a disc
@@ -185,8 +236,12 @@ namespace LineUp
                     continue;
                 }
             }
+
+            Console.WriteLine("Thanks for playing! Press any key to exit");
+            Console.ReadKey();
         }
 
+        //functions used in game loop
         private static GameEngine.DiscType ReadDiscType(GameEngine engine)
         {
             while (true)
@@ -197,7 +252,7 @@ namespace LineUp
 
                 try
                 {
-                    var typeInfo = Console.ReadLine().ToUpper();
+                    var typeInfo = Console.ReadLine()?.Trim().ToUpperInvariant();
                     if (typeInfo == "O")
                     {
                         return GameEngine.DiscType.Ordinary;
@@ -223,6 +278,27 @@ namespace LineUp
                 catch (Exception)
                 {
                     Console.WriteLine("Invalid input");
+                }
+            }
+        }
+
+        private static bool ReadGameMode()
+        {
+            while (true)
+            {
+                Console.WriteLine("Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
+                var gameMode = Console.ReadLine()?.Trim();
+                if (gameMode == "1")
+                {
+                    return false;
+                }
+                else if (gameMode == "2")
+                {
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input, please enter 1 or 2.");
                 }
             }
         }
@@ -326,6 +402,69 @@ namespace LineUp
                 Console.Write($" {j}");
             }
             Console.WriteLine();
+        }
+
+        private static void SaveGame(GameEngine engine)
+        {
+            try 
+            {
+                Console.WriteLine("Saving game... \nEnter file name or press enter for default:");
+                var fileName = Console.ReadLine()?.Trim();
+
+                if (string.IsNullOrWhiteSpace(fileName)) fileName = DefaultSaveFile;
+                else if (!fileName.EndsWith(".json")) fileName += ".json";
+
+                string savePath = Path.Combine(SaveDirectory, fileName);
+                DataSave.Save(engine, savePath);
+                Console.WriteLine($"Game saved to {savePath}");
+            }
+            catch (Exception e) 
+            {
+                Console.WriteLine($"Failed to save game: {e.Message}");
+            }
+        }
+
+        private static GameEngine LoadGame()
+        {
+            try
+            {
+                //list available saved files
+                var savedFiles = Directory.GetFiles(SaveDirectory, "*.json");
+
+                if (savedFiles.Length == 0)
+                {
+                    Console.WriteLine("No saved games found.");
+                    return null;
+                }
+
+                Console.WriteLine("Available saved files:");
+                for (int i = 0; i < savedFiles.Length; i++)
+                { 
+                    var fileName = new FileInfo(savedFiles[i]);
+                    Console.WriteLine(($"{i + 1}, {fileName.Name}"));
+                }
+
+                Console.WriteLine("Enter the number of the saved file to load: ");
+                var input = Console.ReadLine()?.Trim();
+                int choice = int.Parse(input ?? "0");
+
+                if (choice < 1 || choice > savedFiles.Length)
+                {
+                    Console.WriteLine("Invalid choice.");
+                    return null;
+                }
+
+                string loadPath = savedFiles[choice - 1];
+                Console.WriteLine($"Loading game from {Path.GetFileName(loadPath)}");
+
+                var engine = DataSave.Load(loadPath);
+                return engine;
+            }
+            catch (Exception e) 
+            { 
+                Console.WriteLine($"Failed to load game: {e.Message}");
+                return null;
+            }
         }
     }
 
