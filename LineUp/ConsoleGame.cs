@@ -6,15 +6,15 @@ namespace LineUp
 {
     public static class ConsoleGame
     {
-        private const string SAVE_DIRECTORY = "SavedGames";
-        private const string DEFAULT_SAVE_FILE = "game_save.json";
+        private const string SaveDirectory = "SavedGames";
+        private const string DefaultSaveFile = "game_save.json";
 
         public static void Start()
         {
             // Ensure save directory exists
-            if (!Directory.Exists(SAVE_DIRECTORY))
+            if (!Directory.Exists(SaveDirectory))
             {
-                Directory.CreateDirectory(SAVE_DIRECTORY);
+                Directory.CreateDirectory(SaveDirectory);
             }
 
             Console.WriteLine("Welcome to Line Up!");
@@ -474,14 +474,14 @@ namespace LineUp
                 
                 if (string.IsNullOrWhiteSpace(fileName))
                 {
-                    fileName = DEFAULT_SAVE_FILE;
+                    fileName = DefaultSaveFile;
                 }
                 else if (!fileName.EndsWith(".json"))
                 {
                     fileName += ".json";
                 }
                 
-                string savePath = Path.Combine(SAVE_DIRECTORY, fileName);
+                string savePath = Path.Combine(SaveDirectory, fileName);
                 DataSave.Save(engine, savePath);
                 Console.WriteLine($"Game saved successfully to {savePath}!");
             }
@@ -496,7 +496,7 @@ namespace LineUp
             try
             {
                 // List available save files
-                var saveFiles = Directory.GetFiles(SAVE_DIRECTORY, "*.json");
+                var saveFiles = Directory.GetFiles(SaveDirectory, "*.json");
                 
                 if (saveFiles.Length == 0)
                 {
