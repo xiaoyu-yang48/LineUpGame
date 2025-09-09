@@ -37,29 +37,22 @@ namespace LineUp
                 if (choice == "1")
                 {
                     // Start new game - first set up board size
-                    Console.WriteLine("\n=== NEW GAME SETUP ===");
                     var (rows, cols, winLen) = SetBoardSize();
-                    Console.WriteLine($"\nBoard configured: {rows} x {cols}, Win Length = {winLen}");
+                    Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
                     
                     // Then select game mode
                     while (true)
                     {
-                        Console.WriteLine("\nSelect game mode:");
-                        Console.WriteLine("1 - Human vs Human (PvP)");
-                        Console.WriteLine("2 - Human vs Computer (PvE)");
-                        Console.Write("Your choice: ");
-                        
+                        Console.WriteLine("Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
                         var gameMode = Console.ReadLine()?.Trim();
                         if (gameMode == "1")
                         {
                             isVsComputer = false;
-                            Console.WriteLine("Mode: Human vs Human selected.\n");
                             break;
                         }
                         else if (gameMode == "2")
                         {
                             isVsComputer = true;
-                            Console.WriteLine("Mode: Human vs Computer selected.\n");
                             break;
                         }
                         else
@@ -79,10 +72,10 @@ namespace LineUp
                     if (engine != null)
                     {
                         isVsComputer = engine.IsVsComputer;
-                        Console.WriteLine("\n=== GAME LOADED ===");
-                        Console.WriteLine($"Board: {engine.Rows} x {engine.Cols}, Win Length: {engine.WinLen}");
-                        Console.WriteLine($"Mode: {(isVsComputer ? "Human vs Computer" : "Human vs Human")}");
-                        Console.WriteLine($"Current Player: {engine.CurrentPlayer}\n");
+                    Console.WriteLine("\nGame loaded successfully!");
+                    Console.WriteLine($"Board: {engine.Rows} x {engine.Cols}, Win Length: {engine.WinLen}");
+                    Console.WriteLine($"Mode: {(isVsComputer ? "Human vs Computer" : "Human vs Human")}");
+                    Console.WriteLine($"Current Player: {engine.CurrentPlayer}\n");
                         break;
                     }
                     else
@@ -117,8 +110,7 @@ namespace LineUp
                 if (!continueAfterSequence)
                 {
                     // Game ended or user chose not to continue
-                    Console.WriteLine("\nGame Over! Thanks for playing!");
-                    Console.WriteLine("Press any key to exit...");
+                    Console.WriteLine("\nThanks for playing! Press any key to exit...");
                     Console.ReadKey();
                     return;
                 }
@@ -297,8 +289,7 @@ namespace LineUp
                 }
             }
             
-            Console.WriteLine("\nGame Over! Thanks for playing!");
-            Console.WriteLine("Press any key to exit...");
+            Console.WriteLine("\nThanks for playing! Press any key to exit...");
             Console.ReadKey();
         }
 
@@ -362,28 +353,24 @@ namespace LineUp
             int rows = 0;
             int cols = 0;
 
-            Console.WriteLine("\n--- Board Configuration ---");
-            Console.WriteLine($"Minimum size: {minRows} rows x {minCols} columns");
-            Console.WriteLine("Note: Rows cannot exceed columns\n");
-
             while (true)
             {
                 try
                 {
-                    Console.Write($"Enter number of rows (>= {minRows}): ");
+                    Console.WriteLine($"Please enter your board rows: (>= {minRows})");
                     var rowInput = Console.ReadLine()?.Trim();
                     rows = int.Parse(rowInput ?? "0");
                     
-                    Console.Write($"Enter number of columns (>= {minCols}): ");
+                    Console.WriteLine($"Please enter your board columns: (>= {minCols}), and rows <= columns");
                     var colInput = Console.ReadLine()?.Trim();
                     cols = int.Parse(colInput ?? "0");
 
                     if (rows < minRows)
-                        throw new ArgumentOutOfRangeException($"Rows must be at least {minRows}");
+                        throw new ArgumentOutOfRangeException($"Rows must be >= {minRows}");
                     if (cols < minCols)
-                        throw new ArgumentOutOfRangeException($"Columns must be at least {minCols}");
+                        throw new ArgumentOutOfRangeException($"Columns must be >= {minCols}");
                     if (rows > cols)
-                        throw new ArgumentOutOfRangeException("Number of rows cannot exceed number of columns");
+                        throw new ArgumentOutOfRangeException("Rows cannot exceed columns.");
 
                     break;
                 }
