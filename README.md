@@ -38,12 +38,49 @@ dotnet run --project LineUp
 ### During Gameplay
 - Type `SAVE` at any prompt to save the current game state
 - Type `LOAD` when prompted for column input to load a different game
+- Type `SEQ` to switch to sequence input mode
 - The game will prompt for a filename when saving (press Enter for default)
 - When loading, you'll see a list of available save files with timestamps
 
 ### After Game Ends
 - The game will ask if you want to save the final state
 - This is useful for reviewing completed games later
+
+## Sequence Input Mode
+
+The game now supports inputting a sequence of moves in a single line, making it easy to:
+- Test specific game scenarios
+- Replay recorded games
+- Quickly set up board positions
+
+### How to Use Sequence Input
+
+1. **At game start**: After setting up the game, choose option 2 for sequence input
+2. **During gameplay**: Type `SEQ` at any prompt to switch to sequence mode
+
+### Sequence Format
+
+```
+[DiscType][Column],[DiscType][Column],...
+```
+
+Where:
+- **DiscType**: `O` (Ordinary), `M` (Magnetic), `B` (Boring)
+- **Column**: Column number from 1 to board width
+
+### Examples
+
+- `O4,O5,M3,B6` - Player 1 plays ordinary disc in column 4, Player 2 plays ordinary in column 5, Player 1 plays magnetic in column 3, Player 2 plays boring in column 6
+- `O1,O2,O1,O2,O1,O2,O1` - A sequence creating a vertical line in columns 1 and 2
+- `M3,B4,O5,O6` - Mixed disc types across different columns
+
+### Features
+
+- **Automatic player switching**: The sequence alternates between players automatically
+- **Visual feedback**: Each move is displayed with the board state
+- **Error handling**: Invalid moves or insufficient discs will stop the sequence
+- **Continue option**: After sequence completes, you can continue playing interactively
+- **Win detection**: The sequence stops if a player wins during execution
 
 ## Game Rules
 

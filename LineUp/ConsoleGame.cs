@@ -95,14 +95,40 @@ namespace LineUp
                 }
             }
 
-            // Main game loop
+            // Check if user wants to input a sequence of moves
+            Console.WriteLine("\nWould you like to:");
+            Console.WriteLine("1 - Play interactively (normal mode)");
+            Console.WriteLine("2 - Input a sequence of moves (e.g., 'O4,O5,M3,B6')");
+            Console.Write("Your choice: ");
+            
+            var playMode = Console.ReadLine()?.Trim();
+            
+            if (playMode == "2")
+            {
+                // Execute sequence mode
+                ExecuteSequence(engine);
+                
+                // Ask if player wants to save before exiting
+                Console.WriteLine("\nSequence completed. Would you like to save the final state? (Y/N)");
+                var saveChoice = Console.ReadLine()?.Trim()?.ToUpper();
+                if (saveChoice == "Y")
+                {
+                    SaveGame(engine);
+                }
+                
+                Console.WriteLine("\nThanks for playing! Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+            
+            // Main game loop (interactive mode)
             PrintBoard(engine);
             bool gameEnded = false;
 
             while (!gameEnded)
             {
                 // Check for save/load commands
-                Console.WriteLine("\n[Type 'SAVE' to save game, 'LOAD' to load game, or continue playing]");
+                Console.WriteLine("\n[Type 'SAVE' to save game, 'LOAD' to load game, 'SEQ' for sequence input, or continue playing]");
                 
                 var selectedType = ReadDiscType(engine, ref gameEnded);
                 if (gameEnded) break;
@@ -111,12 +137,12 @@ namespace LineUp
 
                 while (true)
                 {
-                    Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc (or 'SAVE'/'LOAD'):");
+                    Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc (or 'SAVE'/'LOAD'/'SEQ'):");
                     try
                     {
                         var input = Console.ReadLine()?.Trim();
                         
-                        // Check for save/load commands
+                        // Check for special commands
                         if (input?.ToUpper() == "SAVE")
                         {
                             SaveGame(engine);
@@ -133,6 +159,13 @@ namespace LineUp
                                 PrintBoard(engine);
                             }
                             continue;
+                        }
+                        else if (input?.ToUpper() == "SEQ")
+                        {
+                            Console.WriteLine("\nSwitching to sequence input mode...");
+                            ExecuteSequence(engine);
+                            gameEnded = true;
+                            break;
                         }
                         
                         colInput = int.Parse(input ?? "0");
@@ -303,7 +336,7 @@ namespace LineUp
                 {
                     var typeInfo = Console.ReadLine()?.Trim()?.ToUpper();
                     
-                    // Check for save/load commands
+                    // Check for special commands
                     if (typeInfo == "SAVE")
                     {
                         SaveGame(engine);
@@ -313,6 +346,13 @@ namespace LineUp
                     {
                         Console.WriteLine("Cannot load during disc selection. Please select a disc type.");
                         continue;
+                    }
+                    else if (typeInfo == "SEQ")
+                    {
+                        Console.WriteLine("\nSwitching to sequence input mode...");
+                        gameEnded = true;
+                        ExecuteSequence(engine);
+                        return GameEngine.DiscType.Ordinary; // Return dummy value since we're exiting
                     }
                     
                     if (typeInfo == "O")
@@ -520,6 +560,366 @@ namespace LineUp
             {
                 Console.WriteLine($"Failed to load game: {ex.Message}");
                 return null;
+            }
+        }
+
+        private static void ExecuteSequence(GameEngine engine)
+        {
+            Console.WriteLine("\n=== SEQUENCE INPUT MODE ===");
+            Console.WriteLine("Enter a sequence of moves separated by commas.");
+            Console.WriteLine("Format: [DiscType][Column] where:");
+            Console.WriteLine("  DiscType: O (Ordinary), M (Magnetic), B (Boring)");
+            Console.WriteLine("  Column: 1 to " + engine.Cols);
+            Console.WriteLine("Example: O4,O5,M3,B6");
+            Console.WriteLine("Enter 'BACK' to return to interactive mode.\n");
+            
+            while (true)
+            {
+                Console.Write("Enter sequence: ");
+                var sequenceInput = Console.ReadLine()?.Trim();
+                
+                if (sequenceInput?.ToUpper() == "BACK")
+                {
+                    Console.WriteLine("Returning to interactive mode...");
+                    return;
+                }
+                
+                if (string.IsNullOrWhiteSpace(sequenceInput))
+                {
+                    Console.WriteLine("Invalid input. Please enter a sequence or 'BACK' to return.");
+                    continue;
+                }
+                
+                // Parse and validate the sequence
+                var moves = ParseSequence(sequenceInput, engine);
+                if (moves == null || moves.Count == 0)
+                {
+                    Console.WriteLine("Invalid sequence format. Please try again.");
+                    continue;
+                }
+                
+                // Execute the sequence
+                Console.WriteLine($"\nExecuting {moves.Count} moves...\n");
+                bool sequenceCompleted = ExecuteMoves(engine, moves);
+                
+                if (!sequenceCompleted)
+                {
+                    Console.WriteLine("\nSequence interrupted due to game ending or invalid move.");
+                }
+                
+                break;
+            }
+        }
+        
+        private static List<(GameEngine.DiscType type, int column)> ParseSequence(string sequence, GameEngine engine)
+        {
+            var moves = new List<(GameEngine.DiscType, int)>();
+            
+            try
+            {
+                // Split by comma and trim each move
+                var moveParts = sequence.Split(',');
+                
+                foreach (var move in moveParts)
+                {
+                    var trimmedMove = move.Trim().ToUpper();
+                    
+                    if (trimmedMove.Length < 2)
+                    {
+                        Console.WriteLine($"Invalid move format: '{move}' (too short)");
+                        return null;
+                    }
+                    
+                    // Parse disc type
+                    char discChar = trimmedMove[0];
+                    GameEngine.DiscType discType;
+                    
+                    switch (discChar)
+                    {
+                        case 'O':
+                            discType = GameEngine.DiscType.Ordinary;
+                            break;
+                        case 'M':
+                            discType = GameEngine.DiscType.Magnetic;
+                            break;
+                        case 'B':
+                            discType = GameEngine.DiscType.Boring;
+                            break;
+                        default:
+                            Console.WriteLine($"Invalid disc type: '{discChar}' in move '{move}'");
+                            return null;
+                    }
+                    
+                    // Parse column number
+                    string columnStr = trimmedMove.Substring(1);
+                    if (!int.TryParse(columnStr, out int column))
+                    {
+                        Console.WriteLine($"Invalid column number: '{columnStr}' in move '{move}'");
+                        return null;
+                    }
+                    
+                    if (column < 1 || column > engine.Cols)
+                    {
+                        Console.WriteLine($"Column {column} out of range (1-{engine.Cols}) in move '{move}'");
+                        return null;
+                    }
+                    
+                    moves.Add((discType, column));
+                }
+                
+                return moves;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing sequence: {ex.Message}");
+                return null;
+            }
+        }
+        
+        private static bool ExecuteMoves(GameEngine engine, List<(GameEngine.DiscType type, int column)> moves)
+        {
+            int moveNumber = 0;
+            
+            foreach (var (discType, column) in moves)
+            {
+                moveNumber++;
+                Console.WriteLine($"\n--- Move {moveNumber}: Player {engine.CurrentPlayer} plays {discType} disc in column {column} ---");
+                
+                // Check if player has the disc type
+                var currentPlayer = (engine.CurrentPlayer == 1) ? engine.Player1 : engine.Player2;
+                if (!currentPlayer.Has(discType))
+                {
+                    Console.WriteLine($"ERROR: Player {engine.CurrentPlayer} doesn't have any {discType} discs left!");
+                    Console.WriteLine($"Available discs - Ordinary: {currentPlayer.OrdinaryDiscs}, Magnetic: {currentPlayer.MagneticDiscs}, Boring: {currentPlayer.BoringDiscs}");
+                    return false;
+                }
+                
+                // Try to drop the disc
+                int col = column - 1; // Convert to 0-based index
+                if (!engine.DropDisc(col, discType, out int placedRow))
+                {
+                    Console.WriteLine($"ERROR: Cannot place disc in column {column}. Column may be full.");
+                    return false;
+                }
+                
+                // Apply disc effects
+                var changed = new List<(int r, int c)>();
+                if (discType != GameEngine.DiscType.Ordinary)
+                {
+                    Console.WriteLine($"Applying {discType} disc effect...");
+                }
+                engine.ApplyDiscEffect(placedRow, col, out changed);
+                
+                // Print board after each move
+                PrintBoard(engine);
+                
+                // Check for win
+                engine.WinCheck(changed, out bool curWin, out bool oppWin);
+                int cur = engine.CurrentPlayer;
+                int opp = (engine.CurrentPlayer == 1) ? 2 : 1;
+                
+                if (curWin && !oppWin)
+                {
+                    Console.WriteLine($"\n*** Player {cur} WINS! ***");
+                    return true;
+                }
+                else if (oppWin && !curWin)
+                {
+                    Console.WriteLine($"\n*** Player {opp} WINS! ***");
+                    return true;
+                }
+                else if (curWin && oppWin)
+                {
+                    Console.WriteLine($"\n*** Players {cur} and {opp} both aligned this turn. It's a DRAW! ***");
+                    return true;
+                }
+                
+                // Check if board is full
+                if (engine.IsBoardFull())
+                {
+                    Console.WriteLine("\n*** Board is full. Game ends in a DRAW! ***");
+                    return true;
+                }
+                
+                // Switch to next player
+                engine.SwitchPlayer();
+                
+                // Add a small delay for better visualization
+                System.Threading.Thread.Sleep(500);
+            }
+            
+            Console.WriteLine($"\n=== Sequence completed successfully! ===");
+            Console.WriteLine($"Current state: Player {engine.CurrentPlayer}'s turn");
+            
+            // Ask if user wants to continue playing interactively
+            Console.WriteLine("\nWould you like to continue playing interactively? (Y/N)");
+            var continueChoice = Console.ReadLine()?.Trim()?.ToUpper();
+            
+            if (continueChoice == "Y")
+            {
+                Console.WriteLine("Switching to interactive mode...\n");
+                // Continue the game interactively
+                PlayInteractive(engine);
+            }
+            
+            return true;
+        }
+        
+        private static void PlayInteractive(GameEngine engine)
+        {
+            bool gameEnded = false;
+            bool isVsComputer = engine.IsVsComputer;
+            
+            while (!gameEnded)
+            {
+                Console.WriteLine("\n[Type 'SAVE' to save game, 'LOAD' to load game, or continue playing]");
+                
+                var selectedType = ReadDiscType(engine, ref gameEnded);
+                if (gameEnded) break;
+                
+                int colInput = 0;
+                
+                while (true)
+                {
+                    Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc:");
+                    try
+                    {
+                        var input = Console.ReadLine()?.Trim();
+                        
+                        if (input?.ToUpper() == "SAVE")
+                        {
+                            SaveGame(engine);
+                            continue;
+                        }
+                        else if (input?.ToUpper() == "LOAD")
+                        {
+                            var loadedEngine = LoadGame();
+                            if (loadedEngine != null)
+                            {
+                                engine = loadedEngine;
+                                isVsComputer = engine.IsVsComputer;
+                                Console.WriteLine("Game loaded successfully!\n");
+                                PrintBoard(engine);
+                            }
+                            continue;
+                        }
+                        
+                        colInput = int.Parse(input ?? "0");
+                        if (colInput <= 0 || colInput > engine.Cols)
+                            throw new ArgumentOutOfRangeException($"Your chosen column must be within the range: 1 to {engine.Cols}");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Invalid input: {ex.Message}");
+                    }
+                }
+                
+                int col = colInput - 1;
+                
+                // Drop disc and check results
+                if (!engine.DropDisc(col, selectedType, out int placedRow))
+                {
+                    Console.WriteLine("Invalid move.");
+                    continue;
+                }
+                
+                var changed = new List<(int r, int c)>();
+                if (selectedType != GameEngine.DiscType.Ordinary) PrintBoard(engine);
+                
+                engine.ApplyDiscEffect(placedRow, col, out changed);
+                PrintBoard(engine);
+                
+                // Win check
+                engine.WinCheck(changed, out bool curWin, out bool oppWin);
+                int cur = engine.CurrentPlayer;
+                int opp = (engine.CurrentPlayer == 1) ? 2 : 1;
+                
+                if (curWin && !oppWin)
+                {
+                    Console.WriteLine($"Player {cur} wins!");
+                    gameEnded = true;
+                    break;
+                }
+                else if (oppWin && !curWin)
+                {
+                    Console.WriteLine($"Player {opp} wins!");
+                    gameEnded = true;
+                    break;
+                }
+                else if (curWin && oppWin)
+                {
+                    Console.WriteLine($"Players {cur} and {opp} both aligned this turn. It's a draw!");
+                    gameEnded = true;
+                    break;
+                }
+                
+                if (engine.IsBoardFull())
+                {
+                    Console.WriteLine("No place to drop more discs. Game Draw.");
+                    gameEnded = true;
+                    break;
+                }
+                
+                engine.SwitchPlayer();
+                
+                // Handle computer player if applicable
+                if (engine.IsVsComputer && engine.CurrentPlayer == 2)
+                {
+                    // ... (computer logic - same as before)
+                    int botCol;
+                    GameEngine.DiscType botType;
+                    
+                    if (!engine.FindWinningMove(out botCol, out botType))
+                    {
+                        if (!engine.RandomMove(out botCol, out botType))
+                        {
+                            Console.WriteLine("Computer: No valid move. Game draw.");
+                            gameEnded = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!engine.DropDisc(botCol, botType, out int botPlacedRow))
+                    {
+                        Console.WriteLine("Computer: Unexpected no valid move");
+                        gameEnded = true;
+                        break;
+                    }
+                    
+                    if (botType != GameEngine.DiscType.Ordinary) PrintBoard(engine);
+                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<(int r, int c)> botChanged);
+                    PrintBoard(engine);
+                    
+                    engine.WinCheck(botChanged, out bool curWin2, out bool oppWin2);
+                    if (curWin2 && !oppWin2)
+                    {
+                        Console.WriteLine($"Player 2 wins!");
+                        gameEnded = true;
+                        break;
+                    }
+                    else if (oppWin2 && !curWin2)
+                    {
+                        Console.WriteLine($"Player 1 wins!");
+                        gameEnded = true;
+                        break;
+                    }
+                    else if (curWin2 && oppWin2)
+                    {
+                        Console.WriteLine($"Players 2 and 1 both aligned this turn. It's a draw!");
+                        gameEnded = true;
+                        break;
+                    }
+                    
+                    if (engine.IsBoardFull())
+                    {
+                        Console.WriteLine("No place to drop more discs. Game Draw.");
+                        gameEnded = true;
+                        break;
+                    }
+                    
+                    engine.SwitchPlayer();
+                }
             }
         }
     }
