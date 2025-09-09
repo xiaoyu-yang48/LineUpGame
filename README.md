@@ -27,13 +27,21 @@ dotnet build
 dotnet run --project LineUp
 ```
 
-## Save/Load Functionality
+## Game Setup Flow
 
-### At Game Start
-1. When you start the game, you'll see three options:
-   - **Load saved game**: Browse and load from existing save files
-   - **Start a new game**: Begin a fresh game
-   - **Exit**: Quit the application
+### Main Menu
+When you start the game, you'll see three options:
+1. **Start a new game**: Set up a fresh game
+2. **Load saved game**: Browse and load from existing save files  
+3. **Exit**: Quit the application
+
+### New Game Setup
+When starting a new game, the setup follows this order:
+1. **Board Configuration**: Set the board size (rows and columns)
+2. **Game Mode Selection**: Choose between PvP (Human vs Human) or PvE (Human vs Computer)
+3. **Play Mode**: Choose to play interactively or input a sequence of moves
+
+## Save/Load Functionality
 
 ### During Gameplay
 - Type `SAVE` at any prompt to save the current game state
@@ -54,7 +62,7 @@ The game supports inputting a sequence of moves in a single line at the start of
 
 ### How to Use Sequence Input
 
-**At game start only**: After setting up the board (choosing new game or loading), you'll be asked if you want to:
+**At game start only**: After completing game setup (board size and game mode) or loading a saved game, you'll be asked if you want to:
 1. Play interactively (normal mode)
 2. Input a sequence of moves
 
