@@ -1,5 +1,5 @@
 using System;
-using System.Data;
+using System.Collections.Generic;
 
 namespace LineUp
 {
@@ -7,17 +7,39 @@ namespace LineUp
     {
         public static void Start()
         {
-            Console.WriteLine("Welcome to Line Up!");
+            bool isVsComputer = false;
+            while (true)
+            {
+                Console.WriteLine("Welcome to Line Up! Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
+                var gameMode = Console.ReadLine()?.Trim();
+                if (gameMode == "1")
+                {
+                    isVsComputer = false;
+                    break;
+                }
+                else if (gameMode == "2")
+                {
+                    isVsComputer = true;
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input, please enter 1 or 2.");
+                }
+            }
+
             // Game logic goes here
 
             var (rows, cols, winLen) = SetBoardSize();
             Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
-            var engine = new GameEngine(rows, cols, winLen);
+            var engine = new GameEngine(rows, cols, winLen, isVsComputer);
+            PrintBoard(engine);
 
             while (true)
             {
-                PrintBoard(engine);
+                var selectedType = ReadDiscType(engine);
                 int colInput = 0;
+
                 while (true)
                 {
                     Console.WriteLine($"Player {engine.CurrentPlayer}, enter a column to drop your disc:");
@@ -52,17 +74,39 @@ namespace LineUp
                 int col = colInput - 1;
 
                 //try to drop a disc
-                if (!engine.DropDisc(col, out int placedRow))
+                if (!engine.DropDisc(col, selectedType, out int placedRow))
                 {
-                    Console.WriteLine("Column is full.");
+                    Console.WriteLine("Invalid move.");
                     continue;
                 }
 
-                //check if win the game
-                if (engine.WinCheck(placedRow, col))
+                //apply disc special effects
+                var changed = new List<(int r, int c)>();
+                if (selectedType != GameEngine.DiscType.Boring) PrintBoard(engine);
+                
+
+                engine.ApplyDiscEffect(placedRow, col, out changed);
+                PrintBoard(engine);
+               
+
+                //wincheck
+                engine.WinCheck(changed, out bool curWin, out bool oppWin);
+                int cur = engine.CurrentPlayer;
+                int opp = (engine.CurrentPlayer == 1) ? 2 : 1;
+                if (curWin && !oppWin)
                 {
-                    PrintBoard(engine);
-                    Console.WriteLine($"Player {engine.CurrentPlayer} wins!");
+                    Console.WriteLine($"Player {cur} wins!");
+                    break;
+                }
+                //check if current player's move leads to opponent winning
+                else if (oppWin && !curWin) 
+                {
+                    Console.WriteLine($"Player {opp} wins!");
+                    break;
+                }
+                else if (curWin && oppWin)
+                {
+                    Console.WriteLine($"Players {cur} and {opp} both aligned this turn. It's a draw!");
                     break;
                 }
 
@@ -76,10 +120,90 @@ namespace LineUp
 
                 //switch to the other player's turn
                 engine.SwitchPlayer();
+
+                if (engine.IsVsComputer && engine.CurrentPlayer == 2)
+                {
+                    int botCol;
+                    GameEngine.DiscType botType;
+
+                    if (!engine.FindWinningMove(out botCol, out botType))
+                    {
+                        if (!engine.RandomMove(out botCol, out botType))
+                        {
+                            Console.WriteLine("Computer: No valid move. Game draw.");
+                            break;
+                        }
+                    }
+
+                    if (!engine.DropDisc(botCol, botType, out int botPlacedRow))
+                    {
+                        Console.WriteLine("Computer: Unexpected no valid move");
+                        break;
+                    }
+
+                    if (botType != GameEngine.DiscType.Boring) PrintBoard(engine);
+                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<(int r, int c)> botChanged);
+                    PrintBoard(engine);
+
+                    engine.WinCheck(botChanged, out bool curWin2, out bool oppWin2);
+                    int cur2 = engine.CurrentPlayer;
+                    int opp2 = (engine.CurrentPlayer == 1) ? 2 : 1;
+                    if (curWin2 && !oppWin2)
+                    {
+                        Console.WriteLine($"Player {cur2} wins!");
+                        break;
+                    }
+                    //check if current player's move leads to opponent winning
+                    else if (oppWin2 && !curWin2)
+                    {
+                        Console.WriteLine($"Player {opp2} wins!");
+                        break;
+                    }
+                    else if (curWin2 && oppWin2)
+                    {
+                        Console.WriteLine($"Players {cur2} and {opp2} both aligned this turn. It's a draw!");
+                        break;
+                    }
+
+                    //check if the board is all full
+                    if (engine.IsBoardFull())
+                    {
+                        PrintBoard(engine);
+                        Console.WriteLine("No place to drop more discs. Game Draw.");
+                        break;
+                    }
+
+                    //switch to the other player's turn
+                    engine.SwitchPlayer();
+                    continue;
+                }
             }
         }
-            
 
+        private static GameEngine.DiscType ReadDiscType(GameEngine engine)
+        {
+            while (true)
+            {
+                var p = (engine.CurrentPlayer == 1) ? engine.Player1 : engine.Player2;
+                Console.WriteLine($"Player {engine.CurrentPlayer}, your discs: boring = {p.BoringDiscs}, magnetic = {p.MagneticDiscs}, drill = {p.DrillDiscs}.");
+                Console.WriteLine($"Select your disc type: (1 = boring, 2 = magnetic, 3 = drill). ");
+
+                var typeInfo = Console.ReadLine();
+                if (typeInfo == "1")
+                {
+                    return GameEngine.DiscType.Boring;
+                }
+                if (typeInfo == "2")
+                {
+                    return GameEngine.DiscType.Magnetic;
+                }
+                if (typeInfo == "3")
+                {
+                    return GameEngine.DiscType.Drill;
+                }
+                Console.WriteLine("Invalid Type.");
+            }
+        }
         private static (int rows, int cols, int winLen) SetBoardSize()
         {
             const int minRows = 6;
@@ -92,9 +216,9 @@ namespace LineUp
                 try
                 {
                     Console.WriteLine($"Please enter your board rows: (>= {minRows})");
-                    rows = int.Parse(Console.ReadLine());
+                    rows = int.Parse(Console.ReadLine()?.Trim());
                     Console.WriteLine($"Please enter your board columns: (>= {minCols}), and rows <= columns");
-                    cols = int.Parse(Console.ReadLine());
+                    cols = int.Parse(Console.ReadLine()?.Trim());
 
                     if (rows < minRows)
                         throw new ArgumentOutOfRangeException($"Rows must be >= {minRows}");
@@ -134,15 +258,42 @@ namespace LineUp
         private static void PrintBoard(GameEngine engine)
         { 
             int[,] board = engine.GetBoard();
+            var types = engine.GetBoardType();
+
             for (int i = engine.Rows -1; i>=0; i--)
             {
-                for (int j = 0;  j < engine.Cols; j++)
+                for (int j = 0; j < engine.Cols; j++)
                 {
                     char discSymbol;
 
                     if (board[i, j] == 1) discSymbol = '@';
                     else if (board[i, j] == 2) discSymbol = '#';
                     else discSymbol = ' ';
+
+                    //check if it is special disc
+                    if (board[i, j] == 1)
+                    {
+                        if (types[i, j] == GameEngine.DiscType.Magnetic)
+                        {
+                            discSymbol = 'M';
+                        }
+                        if (types[i, j] == GameEngine.DiscType.Drill)
+                        {
+                            discSymbol = 'B';
+                        }
+                    }
+
+                    if (board[i, j] == 2)
+                    {
+                        if (types[i, j] == GameEngine.DiscType.Magnetic)
+                        {
+                            discSymbol = 'm';
+                        }
+                        if (types[i, j] == GameEngine.DiscType.Drill)
+                        {
+                            discSymbol = 'b';
+                        }
+                    }
 
                     Console.Write($"|{discSymbol}");
                 }
