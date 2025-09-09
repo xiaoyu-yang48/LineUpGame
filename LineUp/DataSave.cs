@@ -105,17 +105,17 @@ namespace LineUp
             var options = new JsonSerializerOptions { };
             var state = JsonSerializer.Deserialize<SavedState>(json, options) ?? throw new InvalidOperationException("Invalid file.");
 
-            var engine = new GameEngine(state.Rows, state.Cols, state.WinLen, state.IsVsComputer)
-            {
-                engine.GetCurrent = state.CurrentPlayer
-            };
+            var engine = new GameEngine(state.Rows, state.Cols, state.WinLen, state.IsVsComputer);
 
-            engine.GetBoard();
-            engine.GetBoardType();
+            var board = FromJagged(state.Board);
+            var boardType = FromJagged(state.BoardType);
 
-            //restore disc stock
-            engine.Player1.SetStock(state.P1O, state.P1M, state.P1B);
-            engine.Player2.SetStock(state.P2O, state.P2M, state.P2B);
+            //restore state
+            engine.RestoreState(
+                board, boardType, state.CurrentPlayer,
+                (state.P1O, state.P1M, state.P1B),
+                (state.P2O, state.P2M, state.P2B)
+                );
 
             return engine;
         }

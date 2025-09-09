@@ -7,10 +7,17 @@ namespace LineUp
     {
         public static void Start()
         {
+            Console.WriteLine("Welcome to Line Up!");
+            while (true)
+            {
+                Console.WriteLine("Enter 1 = load saved game, enter 2 = start a new game");
+
+
+            }
             bool isVsComputer = false;
             while (true)
             {
-                Console.WriteLine("Welcome to Line Up! Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
+                Console.WriteLine("Select game mode as 1 = Human vs Human or 2 = Human vs Computer.");
                 var gameMode = Console.ReadLine()?.Trim();
                 if (gameMode == "1")
                 {
