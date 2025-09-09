@@ -38,7 +38,6 @@ dotnet run --project LineUp
 ### During Gameplay
 - Type `SAVE` at any prompt to save the current game state
 - Type `LOAD` when prompted for column input to load a different game
-- Type `SEQ` to switch to sequence input mode
 - The game will prompt for a filename when saving (press Enter for default)
 - When loading, you'll see a list of available save files with timestamps
 
@@ -48,15 +47,18 @@ dotnet run --project LineUp
 
 ## Sequence Input Mode
 
-The game now supports inputting a sequence of moves in a single line, making it easy to:
+The game supports inputting a sequence of moves in a single line at the start of the game, making it easy to:
 - Test specific game scenarios
 - Replay recorded games
 - Quickly set up board positions
 
 ### How to Use Sequence Input
 
-1. **At game start**: After setting up the game, choose option 2 for sequence input
-2. **During gameplay**: Type `SEQ` at any prompt to switch to sequence mode
+**At game start only**: After setting up the board (choosing new game or loading), you'll be asked if you want to:
+1. Play interactively (normal mode)
+2. Input a sequence of moves
+
+Choose option 2 to enter sequence mode.
 
 ### Sequence Format
 
@@ -79,8 +81,9 @@ Where:
 - **Automatic player switching**: The sequence alternates between players automatically
 - **Visual feedback**: Each move is displayed with the board state
 - **Error handling**: Invalid moves or insufficient discs will stop the sequence
-- **Continue option**: After sequence completes, you can continue playing interactively
+- **Continue option**: After a valid sequence completes without a win, you can continue playing interactively
 - **Win detection**: The sequence stops if a player wins during execution
+- **Skip option**: Type 'SKIP' instead of a sequence to go directly to interactive play
 
 ## Game Rules
 
