@@ -453,28 +453,21 @@ namespace LineUp
 
         private static void SaveGame(GameEngine engine)
         {
-            try
+            try 
             {
-                Console.WriteLine("\nSaving game...");
-                Console.WriteLine("Enter save file name (or press Enter for default):");
+                Console.WriteLine("Saving game... \nEnter file name or press enter for default:");
                 var fileName = Console.ReadLine()?.Trim();
-                
-                if (string.IsNullOrWhiteSpace(fileName))
-                {
-                    fileName = DefaultSaveFile;
-                }
-                else if (!fileName.EndsWith(".json"))
-                {
-                    fileName += ".json";
-                }
-                
+
+                if (string.IsNullOrWhiteSpace(fileName)) fileName = DefaultSaveFile;
+                else if (!fileName.EndsWith(".json")) fileName += ".json";
+
                 string savePath = Path.Combine(SaveDirectory, fileName);
                 DataSave.Save(engine, savePath);
-                Console.WriteLine($"Game saved successfully to {savePath}!");
+                Console.WriteLine($"Game saved to {savePath}");
             }
-            catch (Exception ex)
+            catch (Exception e) 
             {
-                Console.WriteLine($"Failed to save game: {ex.Message}");
+                Console.WriteLine($"Failed to save game: {e.Message}");
             }
         }
 
@@ -482,45 +475,41 @@ namespace LineUp
         {
             try
             {
-                // List available save files
-                var saveFiles = Directory.GetFiles(SaveDirectory, "*.json");
-                
-                if (saveFiles.Length == 0)
+                //list available saved files
+                var savedFiles = Directory.GetFiles(SaveDirectory, "*.json");
+
+                if (savedFiles.Length == 0)
                 {
                     Console.WriteLine("No saved games found.");
                     return null;
                 }
-                
-                Console.WriteLine("\nAvailable save files:");
-                for (int i = 0; i < saveFiles.Length; i++)
-                {
-                    var fileInfo = new FileInfo(saveFiles[i]);
-                    Console.WriteLine($"{i + 1}. {fileInfo.Name} (Modified: {fileInfo.LastWriteTime})");
+
+                Console.WriteLine("Available saved files:");
+                for (int i = 0; i < savedFiles.Length; i++)
+                { 
+                    var fileName = new FileInfo(savedFiles[i]);
+                    Console.WriteLine($"{i + 1}. {fileName.Name}");
                 }
-                
-                Console.WriteLine("\nEnter the number of the save file to load (or 0 to cancel):");
+
+                Console.WriteLine("Enter the number of the saved file to load: ");
                 var input = Console.ReadLine()?.Trim();
+                int choice = int.Parse(input ?? "0");
                 
-                if (!int.TryParse(input, out int choice) || choice < 0 || choice > saveFiles.Length)
+                if (choice < 1 || choice > savedFiles.Length)
                 {
                     Console.WriteLine("Invalid choice.");
                     return null;
                 }
                 
-                if (choice == 0)
-                {
-                    return null;
-                }
-                
-                string loadPath = saveFiles[choice - 1];
+                string loadPath = savedFiles[choice - 1];
                 Console.WriteLine($"Loading game from {Path.GetFileName(loadPath)}...");
                 
                 var engine = DataSave.Load(loadPath);
                 return engine;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Console.WriteLine($"Failed to load game: {ex.Message}");
+                Console.WriteLine($"Failed to load game: {e.Message}");
                 return null;
             }
         }
