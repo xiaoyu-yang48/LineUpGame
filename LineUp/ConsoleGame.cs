@@ -117,14 +117,8 @@ namespace LineUp
                 if (!continueAfterSequence)
                 {
                     // Game ended or user chose not to continue
-                    Console.WriteLine("\nWould you like to save the game state? (Y/N)");
-                    var saveChoice = Console.ReadLine()?.Trim()?.ToUpper();
-                    if (saveChoice == "Y")
-                    {
-                        SaveGame(engine);
-                    }
-                    
-                    Console.WriteLine("\nThanks for playing! Press any key to exit...");
+                    Console.WriteLine("\nGame Over! Thanks for playing!");
+                    Console.WriteLine("Press any key to exit...");
                     Console.ReadKey();
                     return;
                 }
@@ -133,15 +127,13 @@ namespace LineUp
             
             // Main game loop (interactive mode)
             PrintBoard(engine);
-            bool gameEnded = false;
 
-            while (!gameEnded)
+            while (true)
             {
                 // Check for save/load commands
                 Console.WriteLine("\n[Type 'SAVE' to save game, 'LOAD' to load game, or continue playing]");
                 
-                var selectedType = ReadDiscType(engine, ref gameEnded);
-                if (gameEnded) break;
+                var selectedType = ReadDiscType(engine);
                 
                 int colInput = 0;
 
@@ -222,20 +214,17 @@ namespace LineUp
                 if (curWin && !oppWin)
                 {
                     Console.WriteLine($"Player {cur} wins!");
-                    gameEnded = true;
                     break;
                 }
                 //check if current player's move leads to opponent winning
                 else if (oppWin && !curWin) 
                 {
                     Console.WriteLine($"Player {opp} wins!");
-                    gameEnded = true;
                     break;
                 }
                 else if (curWin && oppWin)
                 {
                     Console.WriteLine($"Players {cur} and {opp} both aligned this turn. It's a draw!");
-                    gameEnded = true;
                     break;
                 }
 
@@ -244,7 +233,6 @@ namespace LineUp
                 {
                     PrintBoard(engine);
                     Console.WriteLine("No place to drop more discs. Game Draw.");
-                    gameEnded = true;
                     break;
                 }
 
@@ -261,7 +249,6 @@ namespace LineUp
                         if (!engine.RandomMove(out botCol, out botType))
                         {
                             Console.WriteLine("Computer: No valid move. Game draw.");
-                            gameEnded = true;
                             break;
                         }
                     }
@@ -269,7 +256,6 @@ namespace LineUp
                     if (!engine.DropDisc(botCol, botType, out int botPlacedRow))
                     {
                         Console.WriteLine("Computer: Unexpected no valid move");
-                        gameEnded = true;
                         break;
                     }
 
@@ -283,20 +269,17 @@ namespace LineUp
                     if (curWin2 && !oppWin2)
                     {
                         Console.WriteLine($"Player {cur2} wins!");
-                        gameEnded = true;
                         break;
                     }
                     //check if current player's move leads to opponent winning
                     else if (oppWin2 && !curWin2)
                     {
                         Console.WriteLine($"Player {opp2} wins!");
-                        gameEnded = true;
                         break;
                     }
                     else if (curWin2 && oppWin2)
                     {
                         Console.WriteLine($"Players {cur2} and {opp2} both aligned this turn. It's a draw!");
-                        gameEnded = true;
                         break;
                     }
 
@@ -305,7 +288,6 @@ namespace LineUp
                     {
                         PrintBoard(engine);
                         Console.WriteLine("No place to drop more discs. Game Draw.");
-                        gameEnded = true;
                         break;
                     }
 
@@ -315,19 +297,12 @@ namespace LineUp
                 }
             }
             
-            // Ask if player wants to save before exiting
-            Console.WriteLine("\nGame ended. Would you like to save the final state? (Y/N)");
-            var saveChoice = Console.ReadLine()?.Trim()?.ToUpper();
-            if (saveChoice == "Y")
-            {
-                SaveGame(engine);
-            }
-            
-            Console.WriteLine("\nThanks for playing! Press any key to exit...");
+            Console.WriteLine("\nGame Over! Thanks for playing!");
+            Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
 
-        private static GameEngine.DiscType ReadDiscType(GameEngine engine, ref bool gameEnded)
+        private static GameEngine.DiscType ReadDiscType(GameEngine engine)
         {
             while (true)
             {

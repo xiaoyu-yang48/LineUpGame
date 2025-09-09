@@ -48,10 +48,7 @@ When starting a new game, the setup follows this order:
 - Type `LOAD` when prompted for column input to load a different game
 - The game will prompt for a filename when saving (press Enter for default)
 - When loading, you'll see a list of available save files with timestamps
-
-### After Game Ends
-- The game will ask if you want to save the final state
-- This is useful for reviewing completed games later
+- Note: You can only save games that are still in progress (not ended games)
 
 ## Sequence Input Mode
 
