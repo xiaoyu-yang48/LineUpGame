@@ -22,7 +22,7 @@ namespace LineUp
             //main menu
             while (true)
             {
-                Console.WriteLine("Enter 1 = start a new game; 2 = load saved game; 3 = exit");
+                Console.WriteLine("Enter 1 = start a new game; 2 = load saved game; 3 = sequence test; 4 = exit");
                 var choice = Console.ReadLine()?.Trim();
 
                 if (choice == "1")
@@ -54,12 +54,17 @@ namespace LineUp
                 }
                 else if (choice == "3")
                 {
+                    RunSequenceTest();
+                    return;
+                }
+                else if (choice == "4")
+                {
                     Console.WriteLine("Thanks for playing! See you next time");
                     return;
                 }
                 else
                 {
-                    Console.WriteLine("Invalid input. Please enter 1, 2, or 3.");
+                    Console.WriteLine("Invalid input. Please enter 1, 2, 3, or 4.");
                 }
             }
             
@@ -465,6 +470,128 @@ namespace LineUp
                 Console.WriteLine($"Failed to load game: {e.Message}");
                 return null;
             }
+        }
+
+        //sequence test mode
+        private static void RunSequenceTest()
+        {
+            Console.WriteLine("=== Test Mode ===");
+
+            var (rows, cols, winLen) = SetBoardSize();
+            Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
+
+            Console.WriteLine("Enter test sequence like: O1,O2,O4,M2,B1 (O/M/B for disc type, number for column)");
+            var line = Console.ReadLine()?.Trim();
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                Console.WriteLine("Empty sequence.");
+                return;
+            }
+
+            var engine = new GameEngine(rows, cols, winLen, isVsComputer: false)
+            { 
+                IgnoreStock = true
+            };
+
+            PrintBoard(engine);
+
+            var tokens = line.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                string token = tokens[i].Trim();
+
+                if (!TryParseMoveToken(token, engine.Cols, out var type, out int col1, out string error))
+                {
+                    Console.WriteLine($"Parse error at step {i + 1} {token}: {error}");
+                    return;
+                }
+
+                //similar to previous game loop logic
+                int col = col1 - 1;
+                if (!engine.DropDisc(col, type, out int placedRow))
+                {
+                    Console.WriteLine($"Invalid move at step {i + 1} {token}");
+                    return;
+                }
+
+                var changed = new List<(int r, int c)>();
+                if (type != GameEngine.DiscType.Ordinary) PrintBoard(engine);
+
+
+                engine.ApplyDiscEffect(placedRow, col, out changed);
+                PrintBoard(engine);
+
+
+                engine.WinCheck(changed, out bool curWin, out bool oppWin);
+                int cur = engine.CurrentPlayer;
+                int opp = (engine.CurrentPlayer == 1) ? 2 : 1;
+                if (curWin && !oppWin)
+                {
+                    Console.WriteLine($"Player {cur} wins at step {i+1}!");
+                    return;
+                }
+                else if (oppWin && !curWin)
+                {
+                    Console.WriteLine($"Player {opp} wins at step {i + 1}!");
+                    return;
+                }
+                else if (curWin && oppWin)
+                {
+                    Console.WriteLine($"Players {cur} and {opp} both aligned this turn at step {i + 1}. It's a draw!");
+                    return;
+                }
+
+                if (engine.IsBoardFull())
+                {
+                    PrintBoard(engine);
+                    Console.WriteLine("No place to drop more discs. Game Draw.");
+                    return;
+                }
+
+                engine.SwitchPlayer();
+            }
+            Console.WriteLine("Sequence test finished. No winner so far.");
+        }
+
+        private static bool TryParseMoveToken(
+            string moveToken, int maxCols,
+            out GameEngine.DiscType type, out int col1Based, out string error)
+        {
+            type = GameEngine.DiscType.Ordinary;
+            col1Based = 0;
+            error = null;
+
+            if (string.IsNullOrWhiteSpace(moveToken) || moveToken.Length < 2)
+            {
+                error = "Token is empty or too short.";
+                return false;
+            }
+
+            //read disc type
+            string t = moveToken[0].ToString().ToUpperInvariant();
+            if (t == "O") type = GameEngine.DiscType.Ordinary;
+            else if (t == "M") type = GameEngine.DiscType.Magnetic;
+            else if (t == "B") type = GameEngine.DiscType.Boring;
+            else
+            {
+                error = $"Unknown disc type '{moveToken[0]}'.";
+                return false;
+            }
+
+            //read column number
+            string number = moveToken.Substring(1);
+            if (!int.TryParse(number, out col1Based))
+            {
+                error = "Unknown column index";
+                return false;
+            }
+            if (col1Based < 1 || col1Based > maxCols)
+            {
+                error = $"Column index out of range 1 to {maxCols}";
+                return false;
+            }
+
+            return true;
         }
     }
 

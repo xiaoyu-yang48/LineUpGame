@@ -18,6 +18,9 @@ namespace LineUp
 
         //computer mode
         public bool IsVsComputer { get; }
+        
+        //mute stock check for sequence test
+        public bool IgnoreStock { get; set; } = false;
         //random - computer randoms drop discs
         private readonly Random rand = new Random();
 
@@ -106,8 +109,11 @@ namespace LineUp
 
             //check disc stock
             var p = GetCurrent();
-            if (!p.Has(type)) return false;
-            p.Consume(type);
+            if (!IgnoreStock)
+            {
+                if (!p.Has(type)) return false;
+                p.Consume(type);
+            }
 
             Board[targetRow, col] = CurrentPlayer;
             BoardType[targetRow, col] = type;
