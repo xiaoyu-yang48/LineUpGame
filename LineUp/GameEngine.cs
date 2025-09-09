@@ -52,7 +52,7 @@ namespace LineUp
         private int[,] backupBoard;
         private DiscType[,] backupBoardType;
         private int bakCP;
-        private int p1B, p1M, p1D, p2B, p2M, p2D;
+        private int p1O, p1M, p1B, p2O, p2M, p2B;
 
         public void BeginRecord()
         {
@@ -64,8 +64,8 @@ namespace LineUp
 
             //backup disc stock and current player
             bakCP = CurrentPlayer;
-            p1B = Player1.OrdinaryDiscs; p1M = Player1.MagneticDiscs; p1D = Player1.BoringDiscs;
-            p2B = Player2.OrdinaryDiscs; p2M = Player2.MagneticDiscs; p2D = Player2.BoringDiscs;
+            p1O = Player1.OrdinaryDiscs; p1M = Player1.MagneticDiscs; p1B = Player1.BoringDiscs;
+            p2O = Player2.OrdinaryDiscs; p2M = Player2.MagneticDiscs; p2B = Player2.BoringDiscs;
         }
 
         public void RollBack()
@@ -78,8 +78,8 @@ namespace LineUp
 
             //restore player and disc stock
             CurrentPlayer = bakCP;
-            Player1.SetStock(p1B, p1M, p1D);
-            Player2.SetStock(p2B, p2M, p2D);
+            Player1.SetStock(p1O, p1M, p1B);
+            Player2.SetStock(p2O, p2M, p2B);
 
             recording = false;
             backupBoard = null;
@@ -413,6 +413,28 @@ namespace LineUp
             col = playableCol[rand.Next(playableCol.Count)];
             type = playableTypes[rand.Next(playableTypes.Count)];
             return true;
+        }
+
+        //save/load
+        public void RestoreState(int[,] board, DiscType[,] boardType, int currentPlayer, (int p1O, int p1M, int p1B) p1, (int p2O, int p2M, int p2B) p2)
+        {
+            if (board == null || boardType == null) throw new ArgumentNullException("board/boardtype is null");
+            if (board.GetLength(0) != Rows || board.GetLength(1) != Cols) throw new ArgumentException("board dimensions mismatch");
+            if (boardType.GetLength(0) != Rows || boardType.GetLength(1) != Cols) throw new ArgumentException("boardtype dimensions mismatch");
+
+            for (int r = 0; r < Rows; r++)
+            {
+                for (int c = 0; c < Cols; c++)
+                {
+                    Board[r, c] = board[r, c];
+                    BoardType[r, c] = boardType[r, c];
+                }
+            }
+
+            Player1.SetStock(p1O, p1M, p1B);
+            Player2.SetStock(p2O, p2M, p2B);
+
+            CurrentPlayer = (currentPlayer == 1) ? 1 : 2;
         }
     }
 }
