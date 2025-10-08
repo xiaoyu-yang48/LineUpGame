@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 
 namespace LineUp
 {
-    public class Player
+    public abstract class Player
     {
         public int Id { get; }
         public int OrdinaryDiscs { get; set; }
         public int BoringDiscs { get; set; }
         public int MagneticDiscs { get; set; }
 
-        public Player(int id, int totalDiscs) 
+        protected Player(int id, int totalDiscs) 
         { 
             Id = id;
             BoringDiscs = 2;
@@ -58,5 +58,15 @@ namespace LineUp
         {
             OrdinaryDiscs += count;
         }
+    }
+
+    public sealed class HumanPlayer : Player
+    {
+        public HumanPlayer(int id, int totalDiscs) : base(id, totalDiscs) { }
+    }
+
+    public sealed class ComputerPlayer : Player
+    {
+        public ComputerPlayer(int id, int totalDiscs) : base(id, totalDiscs) { }
     }
 }

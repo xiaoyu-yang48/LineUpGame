@@ -8,6 +8,8 @@ namespace LineUp
     {
         private int[,] Board;
         private DiscType[,] BoardType;
+        private Board boardRef;
+        private WinRule winRuleRef;
         public int Rows { get; }
         public int Cols { get; }
         public int WinLen { get; }
@@ -29,8 +31,10 @@ namespace LineUp
             IsVsComputer = isVsComputer;
             Board = new int[Rows, Cols];
             BoardType = new DiscType[Rows, Cols];
-            Player1 = new Player(1, rows * cols);
-            Player2 = new Player(2, rows * cols);
+            Player1 = new HumanPlayer(1, rows * cols);
+            Player2 = isVsComputer ? new ComputerPlayer(2, rows * cols) : new HumanPlayer(2, rows * cols);
+            boardRef = new Board(Rows, Cols);
+            winRuleRef = new WinRule(WinLen);
         }
 
         public int[,] GetBoard() => Board;
@@ -224,7 +228,7 @@ namespace LineUp
 
             if (count >= WinLen) return true;
 
-            //Slash ¨L ¨J
+            //Slash ï¿½L ï¿½J
             count = 1;
             r = row - 1;
             c = col - 1;
@@ -246,7 +250,7 @@ namespace LineUp
 
             if (count >= WinLen) return true;
 
-            //Slash ¨K ¨I
+            //Slash ï¿½K ï¿½I
             count = 1;
             r = row - 1;
             c = col + 1;
