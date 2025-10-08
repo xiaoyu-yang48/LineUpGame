@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 
@@ -15,7 +15,7 @@ namespace LineUp
             public int CurrentPlayer { get; set; }
 
             public int[][] Board {  get; set; }
-            public GameEngine.DiscType[][] BoardType { get; set; }
+            public LineUpClassic.DiscType[][] BoardType { get; set; }
 
             public int P1O { get; set; }
             public int P1M { get; set; }
@@ -26,7 +26,7 @@ namespace LineUp
         }
 
         //save game
-        public static void Save(GameEngine engine, string path)
+        public static void Save(LineUpClassic engine, string path)
         {
 
             if (engine == null) throw new ArgumentNullException(nameof(engine), "Engine is null");
@@ -75,15 +75,15 @@ namespace LineUp
             return dst;
         }
 
-        private static GameEngine.DiscType[][] ToJagged(GameEngine.DiscType[,] src)
+        private static LineUpClassic.DiscType[][] ToJagged(LineUpClassic.DiscType[,] src)
         {
             int rows = src.GetLength(0), cols = src.GetLength(1);
-            var dst = new GameEngine.DiscType[rows][];
+            var dst = new LineUpClassic.DiscType[rows][];
 
             for (int r = 0; r < rows; r++)
             {
                 //set dst length to cols
-                dst[r] = new GameEngine.DiscType[cols];
+                dst[r] = new LineUpClassic.DiscType[cols];
 
                 for (int c = 0; c < cols; c++)
                 {
@@ -94,7 +94,7 @@ namespace LineUp
         }
 
         //load game
-        public static GameEngine Load(string path)
+        public static LineUpClassic Load(string path)
         {
 
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentNullException(nameof(path),"Invalid file path");
@@ -105,7 +105,7 @@ namespace LineUp
             var options = new JsonSerializerOptions { };
             var state = JsonSerializer.Deserialize<SavedState>(json, options) ?? throw new InvalidOperationException("Invalid file.");
 
-            var engine = new GameEngine(state.Rows, state.Cols, state.WinLen, state.IsVsComputer);
+            var engine = new LineUpClassic(state.Rows, state.Cols, state.WinLen, state.IsVsComputer);
 
             var board = FromJagged(state.Board);
             var boardType = FromJagged(state.BoardType);
@@ -136,11 +136,11 @@ namespace LineUp
             return dst;
         }
 
-        private static GameEngine.DiscType[,] FromJagged(GameEngine.DiscType[][] src)
+        private static LineUpClassic.DiscType[,] FromJagged(LineUpClassic.DiscType[][] src)
         {
             int rows = src.Length;
             int cols = (rows > 0) ? src[0].Length : 0;
-            var dst = new GameEngine.DiscType[rows, cols];
+            var dst = new LineUpClassic.DiscType[rows, cols];
 
             for (int r = 0; r < rows; r++)
             {
