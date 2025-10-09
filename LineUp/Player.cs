@@ -24,31 +24,31 @@ namespace LineUp
             BoringDiscs = boringNum;
         }
 
-        public bool Has(GameEngine.DiscType type)
+        public bool Has(LineUpClassic.DiscType type)
         {
             switch (type)
             {
-                case GameEngine.DiscType.Ordinary:
+                case LineUpClassic.DiscType.Ordinary:
                     return OrdinaryDiscs > 0;
-                case GameEngine.DiscType.Boring:
+                case LineUpClassic.DiscType.Boring:
                     return BoringDiscs > 0;
-                case GameEngine.DiscType.Magnetic:
+                case LineUpClassic.DiscType.Magnetic:
                     return MagneticDiscs > 0;
                 default:
                     return false;
             }
         }
-        public void Consume(GameEngine.DiscType type)
+        public void Consume(LineUpClassic.DiscType type)
         {
             switch (type)
             {
-                case GameEngine.DiscType.Ordinary:
+                case LineUpClassic.DiscType.Ordinary:
                     OrdinaryDiscs--;
                     break;
-                case GameEngine.DiscType.Boring:
+                case LineUpClassic.DiscType.Boring:
                     BoringDiscs--;
                     break;
-                case GameEngine.DiscType.Magnetic:
+                case LineUpClassic.DiscType.Magnetic:
                     MagneticDiscs--;
                     break;
             }

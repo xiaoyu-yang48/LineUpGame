@@ -19,9 +19,13 @@ namespace LineUp
         public Player Player2 { get; }
         public int CurrentPlayer { get; private set; } = 1;
 
+        // rules and AI strategy
+        private WinRule winRule;
+
         // computer mode
         public bool IsVsComputer { get; }
         private readonly Random rand = new Random();
+        private AIStrategy aiStrategy;
 
         public LineUpClassic(int rows, int cols, int winLen, bool isVsComputer = false)
         {
@@ -33,6 +37,11 @@ namespace LineUp
             BoardType = new DiscType[Rows, Cols];
             Player1 = new HumanPlayer(1, rows * cols);
             Player2 = isVsComputer ? new ComputerPlayer(2, rows * cols) : new HumanPlayer(2, rows * cols);
+            winRule = new WinRule(WinLen);
+            if (IsVsComputer)
+            {
+                aiStrategy = new SimpleAIStrategy();
+            }
         }
 
         public int[,] GetBoard() => Board;
@@ -169,115 +178,11 @@ namespace LineUp
             }
         }
 
-        public bool CheckCellWin(int row, int col)
-        {
-            int player = Board[row, col];
-            if (player == 0) return false;
-
-            // vertical
-            int count = 1;
-            int r = row - 1;
-            while (r >= 0 && Board[r, col] == player)
-            {
-                count++;
-                r--;
-            }
-
-            r = row + 1;
-            while (r < Rows && Board[r, col] == player)
-            {
-                count++;
-                r++;
-            }
-
-            if (count >= WinLen) return true;
-
-            // horizontal
-            count = 1;
-            int c = col - 1;
-            while (c >= 0 && Board[row, c] == player)
-            {
-                count++;
-                c--;
-            }
-
-            c = col + 1;
-            while (c < Cols && Board[row, c] == player)
-            {
-                count++;
-                c++;
-            }
-
-            if (count >= WinLen) return true;
-
-            // diag \
-            count = 1;
-            r = row - 1;
-            c = col - 1;
-            while (r >= 0 && c >= 0 && Board[r, c] == player)
-            {
-                count++;
-                r--;
-                c--;
-            }
-
-            r = row + 1;
-            c = col + 1;
-            while (r < Rows && c < Cols && Board[r, c] == player)
-            {
-                count++;
-                r++;
-                c++;
-            }
-
-            if (count >= WinLen) return true;
-
-            // diag /
-            count = 1;
-            r = row - 1;
-            c = col + 1;
-            while (r >= 0 && c < Cols && Board[r, c] == player)
-            {
-                count++;
-                r--;
-                c++;
-            }
-
-            r = row + 1;
-            c = col - 1;
-            while (r < Rows && c >= 0 && Board[r, c] == player)
-            {
-                count++;
-                r++;
-                c--;
-            }
-
-            if (count >= WinLen) return true;
-            return false;
-        }
+        public bool CheckCellWin(int row, int col) => winRule.CheckCellWin(Board, Rows, Cols, row, col);
 
         public void WinCheck(List<(int r, int c)> changedDisc, out bool curWin, out bool oppWin)
         {
-            curWin = false;
-            oppWin = false;
-
-            if (changedDisc == null || changedDisc.Count == 0) return;
-
-            int cur = CurrentPlayer;
-            int opp = (CurrentPlayer == 1) ? 2 : 1;
-
-            foreach (var (r, c) in changedDisc)
-            {
-                if (r < 0 || r >= Rows || c < 0 || c >= Cols) continue;
-                int owner = Board[r, c];
-                if (owner == 0) continue;
-                if (CheckCellWin(r, c))
-                {
-                    if (owner == cur) curWin = true;
-                    else if (owner == opp) oppWin = true;
-                    if (curWin && oppWin) return;
-                }
-            }
+            winRule.WinCheck(Board, Rows, Cols, CurrentPlayer, changedDisc, out curWin, out oppWin);
         }
 
         public void SwitchPlayer()
@@ -285,14 +190,7 @@ namespace LineUp
             CurrentPlayer = (CurrentPlayer == 1) ? 2 : 1;
         }
 
-        public bool IsBoardFull()
-        {
-            for (int j = 0; j < Cols; j++)
-            {
-                if (Board[Rows - 1, j] == 0) return false;
-            }
-            return true;
-        }
+        public bool IsBoardFull() => winRule.IsBoardFull(Board, Rows, Cols);
 
         private bool IsColumnPlayable(int col)
         {
@@ -336,62 +234,7 @@ namespace LineUp
             }
         }
 
-        public bool FindWinningMove(out int col, out DiscType type)
-        {
-            for (int j = 0; j < Cols; j++)
-            {
-                if (!IsColumnPlayable(j)) continue;
-
-                List<DiscType> playableTypes = new List<DiscType>();
-                if (IsDisctypePlayable(DiscType.Ordinary)) playableTypes.Add(DiscType.Ordinary);
-                if (IsDisctypePlayable(DiscType.Magnetic)) playableTypes.Add(DiscType.Magnetic);
-                if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
-
-                foreach (DiscType t in playableTypes)
-                {
-                    if (TryMoveWins(j, t))
-                    {
-                        col = j;
-                        type = t;
-                        return true;
-                    }
-                }
-            }
-
-            col = -1;
-            type = DiscType.Ordinary;
-            return false;
-        }
-
-        public bool RandomMove(out int col, out DiscType type)
-        {
-            var playableCol = new List<int>();
-            for (int j = 0; j < Cols; j++)
-            {
-                if (IsColumnPlayable(j)) playableCol.Add(j);
-            }
-            if (playableCol.Count == 0)
-            {
-                col = -1;
-                type = DiscType.Ordinary;
-                return false;
-            }
-
-            List<DiscType> playableTypes = new List<DiscType>();
-            if (IsDisctypePlayable(DiscType.Ordinary)) playableTypes.Add(DiscType.Ordinary);
-            if (IsDisctypePlayable(DiscType.Magnetic)) playableTypes.Add(DiscType.Magnetic);
-            if (IsDisctypePlayable(DiscType.Boring)) playableTypes.Add(DiscType.Boring);
-            if (playableTypes.Count == 0)
-            {
-                col = -1;
-                type = DiscType.Ordinary;
-                return false;
-            }
-
-            col = playableCol[rand.Next(playableCol.Count)];
-            type = playableTypes[rand.Next(playableTypes.Count)];
-            return true;
-        }
+        // AI logic moved to AIStrategy. Keep no-ops or wrappers if needed later.
 
         // save/load restore state
         public void RestoreState(int[,] board, DiscType[,] boardType, int currentPlayer, (int p1O, int p1M, int p1B) p1, (int p2O, int p2M, int p2B) p2)
@@ -575,14 +418,10 @@ namespace LineUp
                 {
                     int botCol;
                     LineUpClassic.DiscType botType;
-
-                    if (!engine.FindWinningMove(out botCol, out botType))
+                    if (engine.aiStrategy == null || !engine.aiStrategy.FindMove(engine, out botCol, out botType))
                     {
-                        if (!engine.RandomMove(out botCol, out botType))
-                        {
-                            Console.WriteLine("Computer: No valid move. Game draw.");
-                            break;
-                        }
+                        Console.WriteLine("Computer: No valid move. Game draw.");
+                        break;
                     }
 
                     if (!engine.DropDisc(botCol, botType, out int botPlacedRow))
