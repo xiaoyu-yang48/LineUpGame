@@ -36,7 +36,7 @@ namespace LineUp
         {
             if (col < 0 || col >= Cols) return false;
             // top-most row index is Rows - 1; legal if top is empty
-            return Cells[Rows - 1][col].Disc == null;
+            return GetCell(Rows - 1, col).IsEmpty;
         }
 
         // Place a disc into a column; returns placed row or -1
