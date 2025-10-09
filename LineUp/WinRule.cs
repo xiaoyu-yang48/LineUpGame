@@ -44,17 +44,19 @@ namespace LineUp
             return false;
         }
 
-        public void WinCheck(int[,] board, int rows, int cols, int currentPlayer, List<(int r, int c)> changedDisc, out bool curWin, out bool oppWin)
+        public void WinCheck(int[,] board, int rows, int cols, int currentPlayer, List<CellChange> changedCells, out bool curWin, out bool oppWin)
         {
             curWin = false;
             oppWin = false;
-            if (changedDisc == null || changedDisc.Count == 0) return;
+            if (changedCells == null || changedCells.Count == 0) return;
 
             int cur = currentPlayer;
             int opp = (currentPlayer == 1) ? 2 : 1;
 
-            foreach (var (r, c) in changedDisc)
+            foreach (var change in changedCells)
             {
+                int r = change.Row;
+                int c = change.Col;
                 if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
                 int owner = board[r, c];
                 if (owner == 0) continue;

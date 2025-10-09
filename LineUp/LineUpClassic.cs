@@ -111,9 +111,9 @@ namespace LineUp
             return true;
         }
 
-        public void ApplyDiscEffect(int row, int col, out List<(int r, int c)> changedDisc)
+        public void ApplyDiscEffect(int row, int col, out List<CellChange> changedDisc)
         {
-            changedDisc = new List<(int r, int c)>();
+            changedDisc = new List<CellChange>();
             var type = BoardType[row, col];
             int owner = Board[row, col];
 
@@ -122,7 +122,7 @@ namespace LineUp
                 // ordinary disc
                 if (type == DiscType.Ordinary)
                 {
-                    changedDisc.Add((row, col));
+                    changedDisc.Add(new CellChange(row, col));
                     return;
                 }
                 // boring disc effect
@@ -146,14 +146,14 @@ namespace LineUp
 
                     Board[0, col] = owner;
                     BoardType[0, col] = DiscType.Ordinary;
-                    changedDisc.Add((0, col));
+                    changedDisc.Add(new CellChange(0, col));
                     return;
                 }
 
                 // magnetic disc effect
                 if ((type == DiscType.Magnetic))
                 {
-                    changedDisc.Add((row, col));
+                    changedDisc.Add(new CellChange(row, col));
 
                     if (row == 0 || (row > 0 && Board[row - 1, col] == owner))
                     {
@@ -167,8 +167,8 @@ namespace LineUp
                             (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
                             (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
 
-                            changedDisc.Add((i + 1, col));
-                            changedDisc.Add((i, col));
+                            changedDisc.Add(new CellChange(i + 1, col));
+                            changedDisc.Add(new CellChange(i, col));
                             break;
                         }
                     }
@@ -180,7 +180,7 @@ namespace LineUp
 
         public bool CheckCellWin(int row, int col) => winRule.CheckCellWin(Board, Rows, Cols, row, col);
 
-        public void WinCheck(List<(int r, int c)> changedDisc, out bool curWin, out bool oppWin)
+        public void WinCheck(List<CellChange> changedDisc, out bool curWin, out bool oppWin)
         {
             winRule.WinCheck(Board, Rows, Cols, CurrentPlayer, changedDisc, out curWin, out oppWin);
         }
@@ -380,7 +380,7 @@ namespace LineUp
                     continue;
                 }
 
-                var changed = new List<(int r, int c)>();
+                var changed = new List<CellChange>();
                 if (selectedType != LineUpClassic.DiscType.Ordinary) PrintBoard(engine);
 
                 engine.ApplyDiscEffect(placedRow, col, out changed);
@@ -431,7 +431,7 @@ namespace LineUp
                     }
 
                     if (botType != LineUpClassic.DiscType.Ordinary) PrintBoard(engine);
-                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<(int r, int c)> botChanged);
+                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<CellChange> botChanged);
                     PrintBoard(engine);
 
                     engine.WinCheck(botChanged, out bool curWin2, out bool oppWin2);
