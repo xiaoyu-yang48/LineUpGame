@@ -1,10 +1,10 @@
-﻿namespace LineUp
+namespace LineUp
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            ConsoleGame.Start();
+            LineUpClassic.Start();
         }
     }
 }

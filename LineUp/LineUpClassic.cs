@@ -4,22 +4,274 @@ using System.IO;
 
 namespace LineUp
 {
-    public static class ConsoleGame
+    public sealed class LineUpClassic : Game
     {
+        public override string Name => "LineUpClassic";
+
+        // --- Moved from GameEngine ---
+        private int[,] Board;
+        private DiscType[,] BoardType;
+        public int Rows { get; }
+        public int Cols { get; }
+        public int WinLen { get; }
+
+        public Player Player1 { get; }
+        public Player Player2 { get; }
+        public int CurrentPlayer { get; private set; } = 1;
+
+        // rules and AI strategy
+        private WinRule winRule;
+
+        // computer mode
+        public bool IsVsComputer { get; }
+        private readonly Random rand = new Random();
+        private AIStrategy aiStrategy;
+
+        public LineUpClassic(int rows, int cols, int winLen, bool isVsComputer = false)
+        {
+            Rows = rows;
+            Cols = cols;
+            WinLen = winLen;
+            IsVsComputer = isVsComputer;
+            Board = new int[Rows, Cols];
+            BoardType = new DiscType[Rows, Cols];
+            Player1 = new HumanPlayer(1, rows * cols);
+            Player2 = isVsComputer ? new ComputerPlayer(2, rows * cols) : new HumanPlayer(2, rows * cols);
+            winRule = new WinRule(WinLen);
+            if (IsVsComputer)
+            {
+                aiStrategy = new SimpleAIStrategy();
+            }
+        }
+
+        public int[,] GetBoard() => Board;
+        public DiscType[,] GetBoardType() => BoardType;
+
+        public enum DiscType
+        {
+            Ordinary, Magnetic, Boring
+        }
+
+        private Player GetCurrent() => (CurrentPlayer == 1) ? Player1 : Player2;
+
+        // change and restore (memento hooks)
+        private bool recording = false;
+        private int[,] backupBoard;
+        private DiscType[,] backupBoardType;
+        private int bakCP;
+        private int p1O, p1M, p1B, p2O, p2M, p2B;
+
+        public void BeginRecord()
+        {
+            recording = true;
+            backupBoard = (int[,])Board.Clone();
+            backupBoardType = (DiscType[,])BoardType.Clone();
+            bakCP = CurrentPlayer;
+            p1O = Player1.OrdinaryDiscs; p1M = Player1.MagneticDiscs; p1B = Player1.BoringDiscs;
+            p2O = Player2.OrdinaryDiscs; p2M = Player2.MagneticDiscs; p2B = Player2.BoringDiscs;
+        }
+
+        public void RollBack()
+        {
+            if (!recording) return;
+            Board = (int[,])backupBoard.Clone();
+            BoardType = (DiscType[,])backupBoardType.Clone();
+            CurrentPlayer = bakCP;
+            Player1.SetStock(p1O, p1M, p1B);
+            Player2.SetStock(p2O, p2M, p2B);
+            recording = false;
+            backupBoard = null;
+            backupBoardType = null;
+        }
+
+        // basic game funcs
+        public bool DropDisc(int col, DiscType type, out int placedRow)
+        {
+            placedRow = -1;
+            if (col < 0 || col >= Cols) return false;
+
+            int targetRow = -1;
+            for (int i = 0; i < Rows; i++)
+            {
+                if (Board[i, col] == 0)
+                {
+                    targetRow = i;
+                    break;
+                }
+            }
+            if (targetRow == -1) return false;
+
+            var p = GetCurrent();
+            if (!p.Has(type)) return false;
+            p.Consume(type);
+
+            Board[targetRow, col] = CurrentPlayer;
+            BoardType[targetRow, col] = type;
+            placedRow = targetRow;
+            return true;
+        }
+
+        public void ApplyDiscEffect(int row, int col, out List<CellChange> changedDisc)
+        {
+            changedDisc = new List<CellChange>();
+            var type = BoardType[row, col];
+            int owner = Board[row, col];
+
+            if (owner != 0)
+            {
+                // ordinary disc
+                if (type == DiscType.Ordinary)
+                {
+                    changedDisc.Add(new CellChange(row, col));
+                    return;
+                }
+                // boring disc effect
+                if (type == DiscType.Boring)
+                {
+                    int countP1 = 0, countP2 = 0;
+                    for (int i = 0; i < Rows; i++)
+                    {
+                        if (i != row && Board[i, col] != 0)
+                        {
+                            if (Board[i, col] == 1) countP1++;
+                            else if (Board[i, col] == 2) countP2++;
+                        }
+
+                        Board[i, col] = 0;
+                        BoardType[i, col] = DiscType.Ordinary;
+                    }
+
+                    Player1.ReturnDisc(countP1);
+                    Player2.ReturnDisc(countP2);
+
+                    Board[0, col] = owner;
+                    BoardType[0, col] = DiscType.Ordinary;
+                    changedDisc.Add(new CellChange(0, col));
+                    return;
+                }
+
+                // magnetic disc effect
+                if ((type == DiscType.Magnetic))
+                {
+                    changedDisc.Add(new CellChange(row, col));
+
+                    if (row == 0 || (row > 0 && Board[row - 1, col] == owner))
+                    {
+                        BoardType[row, col] = DiscType.Ordinary;
+                        return;
+                    }
+                    for (int i = row - 2; i >= 0; i--)
+                    {
+                        if (Board[i, col] == owner && BoardType[i, col] == DiscType.Ordinary)
+                        {
+                            (Board[i + 1, col], Board[i, col]) = (Board[i, col], Board[i + 1, col]);
+                            (BoardType[i + 1, col], BoardType[i, col]) = (BoardType[i, col], BoardType[i + 1, col]);
+
+                            changedDisc.Add(new CellChange(i + 1, col));
+                            changedDisc.Add(new CellChange(i, col));
+                            break;
+                        }
+                    }
+                    BoardType[row, col] = DiscType.Ordinary;
+                    return;
+                }
+            }
+        }
+
+        public bool CheckCellWin(int row, int col) => winRule.CheckCellWin(Board, Rows, Cols, row, col);
+
+        public void WinCheck(List<CellChange> changedDisc, out bool curWin, out bool oppWin)
+        {
+            winRule.WinCheck(Board, Rows, Cols, CurrentPlayer, changedDisc, out curWin, out oppWin);
+        }
+
+        public void SwitchPlayer()
+        {
+            CurrentPlayer = (CurrentPlayer == 1) ? 2 : 1;
+        }
+
+        public bool IsBoardFull() => winRule.IsBoardFull(Board, Rows, Cols);
+
+        private bool IsColumnPlayable(int col)
+        {
+            if (col < 0 || col >= Cols) return false;
+            return Board[Rows - 1, col] == 0;
+        }
+
+        private bool IsDisctypePlayable(DiscType type)
+        {
+            return GetCurrent().Has(type);
+        }
+
+        public bool TryMoveWins(int col, DiscType type)
+        {
+            if (!IsColumnPlayable(col)) return false;
+            if (!GetCurrent().Has(type)) return false;
+
+            int targetRow = -1;
+            for (int i = 0; i < Rows; i++)
+            {
+                if (Board[i, col] == 0)
+                {
+                    targetRow = i;
+                    break;
+                }
+            }
+            if (targetRow == -1) return false;
+
+            BeginRecord();
+            try
+            {
+                if (!DropDisc(col, type, out int placedRow)) return false;
+                ApplyDiscEffect(placedRow, col, out List<(int r, int c)> changedDisc);
+                if (changedDisc == null) return false;
+                WinCheck(changedDisc, out bool curWin, out bool oppWin);
+                return curWin && !oppWin;
+            }
+            finally
+            {
+                RollBack();
+            }
+        }
+
+        // AI logic moved to AIStrategy. Keep no-ops or wrappers if needed later.
+
+        // save/load restore state
+        public void RestoreState(int[,] board, DiscType[,] boardType, int currentPlayer, (int p1O, int p1M, int p1B) p1, (int p2O, int p2M, int p2B) p2)
+        {
+            if (board == null || boardType == null) throw new ArgumentNullException("board/boardtype is null");
+            if (board.GetLength(0) != Rows || board.GetLength(1) != Cols) throw new ArgumentException("board dimensions mismatch");
+            if (boardType.GetLength(0) != Rows || boardType.GetLength(1) != Cols) throw new ArgumentException("boardtype dimensions mismatch");
+
+            for (int r = 0; r < Rows; r++)
+            {
+                for (int c = 0; c < Cols; c++)
+                {
+                    Board[r, c] = board[r, c];
+                    BoardType[r, c] = boardType[r, c];
+                }
+            }
+
+            Player1.SetStock(p1.p1O, p1.p1M, p1.p1B);
+            Player2.SetStock(p2.p2O, p2.p2M, p2.p2B);
+
+            CurrentPlayer = (currentPlayer == 1) ? 1 : 2;
+        }
+
+        // --- Moved from ConsoleGame ---
         private const string SaveDirectory = "SavedGames";
         private const string DefaultSaveFile = "SavedGame.json";
+
         public static void Start()
         {
-            //ensure save directory exists
             if (!Directory.Exists(SaveDirectory))
-            { 
+            {
                 Directory.CreateDirectory(SaveDirectory);
             }
 
             Console.WriteLine("Welcome to Line Up!");
-            GameEngine engine = null;
-            
-            //main menu
+            LineUpClassic engine = null;
+
             while (true)
             {
                 Console.WriteLine("Enter 1 = start a new game; 2 = load saved game; 3 = exit");
@@ -27,20 +279,14 @@ namespace LineUp
 
                 if (choice == "1")
                 {
-                    //start new game, set up board size
                     var (rows, cols, winLen) = SetBoardSize();
                     Console.WriteLine($"Your game board is {rows} * {cols}, WinLen = {winLen}");
-
-                    //select game mode
                     bool vsComputer = ReadGameMode();
-
-                    //create game engine
-                    engine = new GameEngine(rows, cols, winLen, vsComputer);
+                    engine = new LineUpClassic(rows, cols, winLen, vsComputer);
                     break;
                 }
                 else if (choice == "2")
                 {
-                    //load saved game
                     engine = LoadGame();
                     if (engine != null)
                     {
@@ -62,10 +308,8 @@ namespace LineUp
                     Console.WriteLine("Invalid input. Please enter 1, 2, or 3.");
                 }
             }
-            
 
-            // Main game loop
-            PrintBoard (engine);
+            PrintBoard(engine);
 
             while (true)
             {
@@ -81,7 +325,6 @@ namespace LineUp
                     {
                         var input = Console.ReadLine()?.Trim();
 
-                        //check if save or load
                         if (input?.ToUpper() == "SAVE")
                         {
                             SaveGame(engine);
@@ -131,23 +374,18 @@ namespace LineUp
                 if (restartTurn) continue;
                 int col = colInput - 1;
 
-                //try to drop a disc
                 if (!engine.DropDisc(col, selectedType, out int placedRow))
                 {
                     Console.WriteLine("Invalid move.");
                     continue;
                 }
 
-                //apply disc special effects
-                var changed = new List<(int r, int c)>();
-                if (selectedType != GameEngine.DiscType.Ordinary) PrintBoard(engine);
-                
+                var changed = new List<CellChange>();
+                if (selectedType != LineUpClassic.DiscType.Ordinary) PrintBoard(engine);
 
                 engine.ApplyDiscEffect(placedRow, col, out changed);
                 PrintBoard(engine);
-               
 
-                //wincheck
                 engine.WinCheck(changed, out bool curWin, out bool oppWin);
                 int cur = engine.CurrentPlayer;
                 int opp = (engine.CurrentPlayer == 1) ? 2 : 1;
@@ -156,8 +394,7 @@ namespace LineUp
                     Console.WriteLine($"Player {cur} wins!");
                     break;
                 }
-                //check if current player's move leads to opponent winning
-                else if (oppWin && !curWin) 
+                else if (oppWin && !curWin)
                 {
                     Console.WriteLine($"Player {opp} wins!");
                     break;
@@ -168,7 +405,6 @@ namespace LineUp
                     break;
                 }
 
-                //check if the board is all full
                 if (engine.IsBoardFull())
                 {
                     PrintBoard(engine);
@@ -176,21 +412,16 @@ namespace LineUp
                     break;
                 }
 
-                //switch to the other player's turn
                 engine.SwitchPlayer();
 
                 if (engine.IsVsComputer && engine.CurrentPlayer == 2)
                 {
                     int botCol;
-                    GameEngine.DiscType botType;
-
-                    if (!engine.FindWinningMove(out botCol, out botType))
+                    LineUpClassic.DiscType botType;
+                    if (engine.aiStrategy == null || !engine.aiStrategy.FindMove(engine, out botCol, out botType))
                     {
-                        if (!engine.RandomMove(out botCol, out botType))
-                        {
-                            Console.WriteLine("Computer: No valid move. Game draw.");
-                            break;
-                        }
+                        Console.WriteLine("Computer: No valid move. Game draw.");
+                        break;
                     }
 
                     if (!engine.DropDisc(botCol, botType, out int botPlacedRow))
@@ -199,8 +430,8 @@ namespace LineUp
                         break;
                     }
 
-                    if (botType != GameEngine.DiscType.Ordinary) PrintBoard(engine);
-                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<(int r, int c)> botChanged);
+                    if (botType != LineUpClassic.DiscType.Ordinary) PrintBoard(engine);
+                    engine.ApplyDiscEffect(botPlacedRow, botCol, out List<CellChange> botChanged);
                     PrintBoard(engine);
 
                     engine.WinCheck(botChanged, out bool curWin2, out bool oppWin2);
@@ -211,7 +442,6 @@ namespace LineUp
                         Console.WriteLine($"Player {cur2} wins!");
                         break;
                     }
-                    //check if current player's move leads to opponent winning
                     else if (oppWin2 && !curWin2)
                     {
                         Console.WriteLine($"Player {opp2} wins!");
@@ -223,7 +453,6 @@ namespace LineUp
                         break;
                     }
 
-                    //check if the board is all full
                     if (engine.IsBoardFull())
                     {
                         PrintBoard(engine);
@@ -231,7 +460,6 @@ namespace LineUp
                         break;
                     }
 
-                    //switch to the other player's turn
                     engine.SwitchPlayer();
                     continue;
                 }
@@ -241,8 +469,8 @@ namespace LineUp
             Console.ReadKey();
         }
 
-        //functions used in game loop
-        private static GameEngine.DiscType ReadDiscType(GameEngine engine)
+        // functions used in game loop (moved from ConsoleGame)
+        private static LineUpClassic.DiscType ReadDiscType(LineUpClassic engine)
         {
             while (true)
             {
@@ -255,15 +483,15 @@ namespace LineUp
                     var typeInfo = Console.ReadLine()?.Trim().ToUpperInvariant();
                     if (typeInfo == "O")
                     {
-                        return GameEngine.DiscType.Ordinary;
+                        return LineUpClassic.DiscType.Ordinary;
                     }
                     if (typeInfo == "M")
                     {
-                        return GameEngine.DiscType.Magnetic;
+                        return LineUpClassic.DiscType.Magnetic;
                     }
                     if (typeInfo == "B")
                     {
-                        return GameEngine.DiscType.Boring;
+                        return LineUpClassic.DiscType.Boring;
                     }
                     Console.WriteLine("Invalid Type.");
                 }
@@ -302,6 +530,7 @@ namespace LineUp
                 }
             }
         }
+
         private static (int rows, int cols, int winLen) SetBoardSize()
         {
             const int minRows = 6;
@@ -353,12 +582,12 @@ namespace LineUp
             return (rows, cols, winLen);
         }
 
-        private static void PrintBoard(GameEngine engine)
-        { 
+        private static void PrintBoard(LineUpClassic engine)
+        {
             int[,] board = engine.GetBoard();
             var types = engine.GetBoardType();
 
-            for (int i = engine.Rows -1; i>=0; i--)
+            for (int i = engine.Rows - 1; i >= 0; i--)
             {
                 for (int j = 0; j < engine.Cols; j++)
                 {
@@ -368,14 +597,13 @@ namespace LineUp
                     else if (board[i, j] == 2) discSymbol = '#';
                     else discSymbol = ' ';
 
-                    //check if it is special disc
                     if (board[i, j] == 1)
                     {
-                        if (types[i, j] == GameEngine.DiscType.Magnetic)
+                        if (types[i, j] == LineUpClassic.DiscType.Magnetic)
                         {
                             discSymbol = 'M';
                         }
-                        if (types[i, j] == GameEngine.DiscType.Boring)
+                        if (types[i, j] == LineUpClassic.DiscType.Boring)
                         {
                             discSymbol = 'B';
                         }
@@ -383,11 +611,11 @@ namespace LineUp
 
                     if (board[i, j] == 2)
                     {
-                        if (types[i, j] == GameEngine.DiscType.Magnetic)
+                        if (types[i, j] == LineUpClassic.DiscType.Magnetic)
                         {
                             discSymbol = 'm';
                         }
-                        if (types[i, j] == GameEngine.DiscType.Boring)
+                        if (types[i, j] == LineUpClassic.DiscType.Boring)
                         {
                             discSymbol = 'b';
                         }
@@ -404,9 +632,9 @@ namespace LineUp
             Console.WriteLine();
         }
 
-        private static void SaveGame(GameEngine engine)
+        private static void SaveGame(LineUpClassic engine)
         {
-            try 
+            try
             {
                 Console.WriteLine("Saving game... \nEnter file name or press enter for default:");
                 var fileName = Console.ReadLine()?.Trim();
@@ -418,17 +646,16 @@ namespace LineUp
                 DataSave.Save(engine, savePath);
                 Console.WriteLine($"Game saved to {savePath}");
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Console.WriteLine($"Failed to save game: {e.Message}");
             }
         }
 
-        private static GameEngine LoadGame()
+        private static LineUpClassic LoadGame()
         {
             try
             {
-                //list available saved files
                 var savedFiles = Directory.GetFiles(SaveDirectory, "*.json");
 
                 if (savedFiles.Length == 0)
@@ -439,7 +666,7 @@ namespace LineUp
 
                 Console.WriteLine("Available saved files:");
                 for (int i = 0; i < savedFiles.Length; i++)
-                { 
+                {
                     var fileName = new FileInfo(savedFiles[i]);
                     Console.WriteLine(($"{i + 1}, {fileName.Name}"));
                 }
@@ -460,12 +687,11 @@ namespace LineUp
                 var engine = DataSave.Load(loadPath);
                 return engine;
             }
-            catch (Exception e) 
-            { 
+            catch (Exception e)
+            {
                 Console.WriteLine($"Failed to load game: {e.Message}");
                 return null;
             }
         }
     }
-
 }
