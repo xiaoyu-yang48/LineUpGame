@@ -59,18 +59,18 @@ namespace LineUp
         {
             for (int c = 0; c < Cols; c++)
             {
-                int write = 0;
+                int nextFillRow = 0;
                 for (int r = 0; r < Rows; r++)
                 {
                     var disc = Cells[r][c].Disc;
                     if (disc != null)
                     {
-                        if (write != r)
+                        if (nextFillRow != r)
                         {
-                            Cells[write][c].Disc = disc;
+                            Cells[nextFillRow][c].Disc = disc;
                             Cells[r][c].Disc = null;
                         }
-                        write++;
+                        nextFillRow++;
                     }
                 }
             }
