@@ -76,39 +76,34 @@ namespace LineUp
             }
         }
 
-        // Rotate the board clockwise
+        // Rotate the board 90° clockwise.
+        // Mapping: (oldRow, oldCol) -> (newRow, newCol) = (oldCol, Rows - 1 - oldRow)
+        // 注意：由于 Rows/Cols 为只读且网格形状固定，只有方阵时才能原地覆盖；非方阵时本方法不改变棋盘。
         public void RotateCW()
         {
-            var newCells = new Cell[Cols][];
-            for (int r = 0; r < Cols; r++)
+            if (Rows != Cols)
             {
-                newCells[r] = new Cell[Rows];
+                // 非方阵：保留占位行为，不修改当前网格尺寸与数据
+                return;
+            }
+
+            var rotated = new Disc?[Rows, Cols];
+
+            for (int oldRow = 0; oldRow < Rows; oldRow++)
+            {
+                for (int oldCol = 0; oldCol < Cols; oldCol++)
+                {
+                    int newRow = oldCol;
+                    int newCol = Rows - 1 - oldRow;
+                    rotated[newRow, newCol] = Cells[oldRow][oldCol].Disc;
+                }
             }
 
             for (int r = 0; r < Rows; r++)
             {
                 for (int c = 0; c < Cols; c++)
                 {
-                    int nr = c;
-                    int nc = Rows - 1 - r;
-                    var newCell = new Cell(nr, nc) { Disc = Cells[r][c].Disc };
-                    newCells[nr][nc] = newCell;
-                }
-            }
-
-            // replace
-            int oldRows = Rows, oldCols = Cols;
-            // Cannot reassign readonly props; construct a new board is typical, but we keep API contract
-            // For structure only: copy back into same shape arrays when square; otherwise this is a no-op placeholder
-            // To keep compile-time constraints, we do a best-effort when dimensions are square
-            if (oldRows == oldCols)
-            {
-                for (int r = 0; r < Rows; r++)
-                {
-                    for (int c = 0; c < Cols; c++)
-                    {
-                        Cells[r][c].Disc = newCells[r][c].Disc;
-                    }
+                    Cells[r][c].Disc = rotated[r, c];
                 }
             }
         }
