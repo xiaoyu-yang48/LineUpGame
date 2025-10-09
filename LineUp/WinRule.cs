@@ -10,8 +10,7 @@ namespace LineUp
 
         private static int OwnerAt(Board board, int row, int col)
         {
-            var disc = board.GetCell(row, col).Disc;
-            return disc?.DiscOwner ?? 0;
+            return board.GetCell(row, col).Owner;
         }
 
         public bool CheckCellWin(int[,] board, int rows, int cols, int row, int col)
