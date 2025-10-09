@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace LineUp
@@ -15,51 +14,79 @@ namespace LineUp
             return disc?.DiscOwner ?? 0;
         }
 
-        private bool CheckCellWinCore(Func<int, int, int> getOwner, int rows, int cols, int row, int col)
+        public bool CheckCellWin(int[,] board, int rows, int cols, int row, int col)
         {
-            int player = getOwner(row, col);
+            int player = board[row, col];
             if (player == 0) return false;
 
             int count = 1;
             int r = row - 1;
-            while (r >= 0 && getOwner(r, col) == player) { count++; r--; }
+            while (r >= 0 && board[r, col] == player) { count++; r--; }
             r = row + 1;
-            while (r < rows && getOwner(r, col) == player) { count++; r++; }
+            while (r < rows && board[r, col] == player) { count++; r++; }
             if (count >= WinLen) return true;
 
             count = 1;
             int c = col - 1;
-            while (c >= 0 && getOwner(row, c) == player) { count++; c--; }
+            while (c >= 0 && board[row, c] == player) { count++; c--; }
             c = col + 1;
-            while (c < cols && getOwner(row, c) == player) { count++; c++; }
+            while (c < cols && board[row, c] == player) { count++; c++; }
             if (count >= WinLen) return true;
 
             count = 1;
             r = row - 1; c = col - 1;
-            while (r >= 0 && c >= 0 && getOwner(r, c) == player) { count++; r--; c--; }
+            while (r >= 0 && c >= 0 && board[r, c] == player) { count++; r--; c--; }
             r = row + 1; c = col + 1;
-            while (r < rows && c < cols && getOwner(r, c) == player) { count++; r++; c++; }
+            while (r < rows && c < cols && board[r, c] == player) { count++; r++; c++; }
             if (count >= WinLen) return true;
 
             count = 1;
             r = row - 1; c = col + 1;
-            while (r >= 0 && c < cols && getOwner(r, c) == player) { count++; r--; c++; }
+            while (r >= 0 && c < cols && board[r, c] == player) { count++; r--; c++; }
             r = row + 1; c = col - 1;
-            while (r < rows && c >= 0 && getOwner(r, c) == player) { count++; r++; c--; }
+            while (r < rows && c >= 0 && board[r, c] == player) { count++; r++; c--; }
             if (count >= WinLen) return true;
 
             return false;
         }
 
-        public bool CheckCellWin(int[,] board, int rows, int cols, int row, int col)
-        {
-            return CheckCellWinCore((r, c) => board[r, c], rows, cols, row, col);
-        }
-
         // Overload: use Board/Cell directly
         public bool CheckCellWin(Board board, Cell cell)
         {
-            return CheckCellWinCore((r, c) => OwnerAt(board, r, c), board.Rows, board.Cols, cell.Row, cell.Col);
+            int rows = board.Rows, cols = board.Cols;
+            int row = cell.Row, col = cell.Col;
+            int player = OwnerAt(board, row, col);
+            if (player == 0) return false;
+
+            int count = 1;
+            int r = row - 1;
+            while (r >= 0 && OwnerAt(board, r, col) == player) { count++; r--; }
+            r = row + 1;
+            while (r < rows && OwnerAt(board, r, col) == player) { count++; r++; }
+            if (count >= WinLen) return true;
+
+            count = 1;
+            int c = col - 1;
+            while (c >= 0 && OwnerAt(board, row, c) == player) { count++; c--; }
+            c = col + 1;
+            while (c < cols && OwnerAt(board, row, c) == player) { count++; c++; }
+            if (count >= WinLen) return true;
+
+            count = 1;
+            r = row - 1; c = col - 1;
+            while (r >= 0 && c >= 0 && OwnerAt(board, r, c) == player) { count++; r--; c--; }
+            r = row + 1; c = col + 1;
+            while (r < rows && c < cols && OwnerAt(board, r, c) == player) { count++; r++; c++; }
+            if (count >= WinLen) return true;
+
+            count = 1;
+            r = row - 1; c = col + 1;
+            while (r >= 0 && c < cols && OwnerAt(board, r, c) == player) { count++; r--; c++; }
+            r = row + 1; c = col - 1;
+            while (r < rows && c >= 0 && OwnerAt(board, r, c) == player) { count++; r++; c--; }
+            if (count >= WinLen) return true;
+
+            return false;
         }
 
         public void WinCheck(int[,] board, int rows, int cols, int currentPlayer, List<CellChange> changedCells, out bool curWin, out bool oppWin)
