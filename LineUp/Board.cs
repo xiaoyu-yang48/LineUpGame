@@ -5,9 +5,9 @@ namespace LineUp
     // Board with cell grid and helpers
     public class Board
     {
-        public int Rows { get; }
-        public int Cols { get; }
-        public Cell[][] Cells { get; }
+        public int Rows { get; private set; }
+        public int Cols { get; private set; }
+        public Cell[][] Cells { get; private set; }
 
         public Board(int rows, int cols)
         {
@@ -81,31 +81,35 @@ namespace LineUp
         // 注意：由于 Rows/Cols 为只读且网格形状固定，只有方阵时才能原地覆盖；非方阵时本方法不改变棋盘。
         public void RotateCW()
         {
-            if (Rows != Cols)
+            int oldRows = Rows;
+            int oldCols = Cols;
+
+            int newRows = oldCols;
+            int newCols = oldRows;
+
+            var newCells = new Cell[newRows][];
+            for (int r = 0; r < newRows; r++)
             {
-                // 非方阵：保留占位行为，不修改当前网格尺寸与数据
-                return;
+                newCells[r] = new Cell[newCols];
+                for (int c = 0; c < newCols; c++)
+                {
+                    newCells[r][c] = new Cell(r, c);
+                }
             }
 
-            var rotated = new Disc?[Rows, Cols];
-
-            for (int oldRow = 0; oldRow < Rows; oldRow++)
+            for (int oldRow = 0; oldRow < oldRows; oldRow++)
             {
-                for (int oldCol = 0; oldCol < Cols; oldCol++)
+                for (int oldCol = 0; oldCol < oldCols; oldCol++)
                 {
                     int newRow = oldCol;
-                    int newCol = Rows - 1 - oldRow;
-                    rotated[newRow, newCol] = Cells[oldRow][oldCol].Disc;
+                    int newCol = oldRows - 1 - oldRow;
+                    newCells[newRow][newCol].Disc = Cells[oldRow][oldCol].Disc;
                 }
             }
 
-            for (int r = 0; r < Rows; r++)
-            {
-                for (int c = 0; c < Cols; c++)
-                {
-                    Cells[r][c].Disc = rotated[r, c];
-                }
-            }
+            Cells = newCells;
+            Rows = newRows;
+            Cols = newCols;
         }
     }
 }
