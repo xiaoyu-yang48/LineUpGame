@@ -4,6 +4,22 @@ namespace LineUp
     public abstract class Disc
     {
         public abstract DiscKind Kind { get; }
+
+        // Owner id (0 = none/unassigned)
+        public int DiscOwner { get; }
+
+        protected Disc()
+        {
+            DiscOwner = 0;
+        }
+
+        protected Disc(int ownerId)
+        {
+            DiscOwner = ownerId;
+        }
+
+        // Hook for special behavior when the disc is placed at (row, col)
+        public virtual void OnPlaced(Board board, int row, int col) { }
     }
 
     public enum DiscKind
@@ -16,21 +32,29 @@ namespace LineUp
 
     public sealed class OrdinaryDisc : Disc
     {
+        public OrdinaryDisc() : base() { }
+        public OrdinaryDisc(int ownerId) : base(ownerId) { }
         public override DiscKind Kind => DiscKind.Ordinary;
     }
 
     public sealed class BoringDisc : Disc
     {
+        public BoringDisc() : base() { }
+        public BoringDisc(int ownerId) : base(ownerId) { }
         public override DiscKind Kind => DiscKind.Boring;
     }
 
     public sealed class MagneticDisc : Disc
     {
+        public MagneticDisc() : base() { }
+        public MagneticDisc(int ownerId) : base(ownerId) { }
         public override DiscKind Kind => DiscKind.Magnetic;
     }
 
     public sealed class ExplosiveDisc : Disc
     {
+        public ExplosiveDisc() : base() { }
+        public ExplosiveDisc(int ownerId) : base(ownerId) { }
         public override DiscKind Kind => DiscKind.Explosive;
     }
 
